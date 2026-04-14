@@ -2,7 +2,7 @@
 name: claims-drafting
 description: "Draft patent claims for an invention. Use when user says \"撰写权利要求\", \"draft claims\", \"写权利要求书\", \"claim drafting\", or wants to create patent claims. The core skill of the patent pipeline."
 argument-hint: [invention-disclosure-path]
-allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, Agent, WebSearch, WebFetch, mcp__codex__codex, mcp__codex__codex-reply
+allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, Agent, WebSearch, WebFetch
 ---
 
 # Claims Drafting: The Core Patent Skill
@@ -132,37 +132,37 @@ If any element lacks specification support, add it to the specification requirem
 
 ### Step 5: Cross-Model Examiner Review
 
-Call `REVIEWER_MODEL` via `mcp__codex__codex` with xhigh reasoning:
+Call `REVIEWER_MODEL` via `codex exec` with xhigh reasoning:
 
-```
-mcp__codex__codex:
-  config: {"model_reasoning_effort": "xhigh"}
-  prompt: |
-    You are a senior patent examiner at the [USPTO/CNIPA/EPO].
-    Review the following patent claims for quality and patentability.
+```bash
+codex exec "$(cat <<'PROMPT'
+You are a senior patent examiner at the [USPTO/CNIPA/EPO].
+Review the following patent claims for quality and patentability.
 
-    CLAIMS: [all claims]
+CLAIMS: [all claims]
 
-    PRIOR ART: [prior art references from PRIOR_ART_REPORT.md]
+PRIOR ART: [prior art references from PRIOR_ART_REPORT.md]
 
-    INVENTION: [summary from INVENTION_DISCLOSURE.md]
+INVENTION: [summary from INVENTION_DISCLOSURE.md]
 
-    Analyze each claim for:
-    1. Clarity (35 USC 112(b) / Art 84 EPC): Are terms definite?
-    2. Written description support: Does the spec support all claim scope?
-    3. Anticipation (102/Art 54): Would any single reference anticipate?
-    4. Obviousness (103/Art 56): Would any combination render obvious?
-    5. Claim scope: Are independent claims broad enough to be valuable?
-    6. Dependent claims: Do they provide meaningful fallback positions?
-    7. Antecedent basis: Any issues with "a"/"the" usage?
-    8. Indefinite terms: Any functional/result language issues?
+Analyze each claim for:
+1. Clarity (35 USC 112(b) / Art 84 EPC): Are terms definite?
+2. Written description support: Does the spec support all claim scope?
+3. Anticipation (102/Art 54): Would any single reference anticipate?
+4. Obviousness (103/Art 56): Would any combination render obvious?
+5. Claim scope: Are independent claims broad enough to be valuable?
+6. Dependent claims: Do they provide meaningful fallback positions?
+7. Antecedent basis: Any issues with "a"/"the" usage?
+8. Indefinite terms: Any functional/result language issues?
 
-    For each issue found, provide:
-    - The specific claim number and element
-    - The problem (cite statute/rule)
-    - A suggested fix
+For each issue found, provide:
+- The specific claim number and element
+- The problem (cite statute/rule)
+- A suggested fix
 
-    Provide an overall PATENTABILITY SCORE: 1-10.
+Provide an overall PATENTABILITY SCORE: 1-10.
+PROMPT
+)" --skip-git-repo-check 2>&1
 ```
 
 ### Step 6: Revision Loop
@@ -172,7 +172,7 @@ If the examiner review identifies issues:
 1. Address all CRITICAL issues (anticipation, obviousness, indefiniteness)
 2. Address MAJOR issues (scope too narrow, missing support, weak fallbacks)
 3. Consider MINOR issues (antecedent basis, formatting)
-4. Re-submit to examiner for round 2 (use `mcp__codex__codex` with threadId)
+4. Re-submit to examiner for round 2 (use `codex exec` with threadId)
 5. Repeat up to `MAX_CLAIM_REVISION_ROUNDS` times
 
 ### Step 7: Output
@@ -223,4 +223,4 @@ Write `patent/CLAIMS.md`:
 - Never include result-to-be-achieved language in claims ("configured to achieve high accuracy").
 - Never fabricate claim language -- every element must come from the actual invention.
 - If drafting for ALL jurisdictions, produce separate claim sets for CN, US, and EP.
-- If `mcp__codex__codex` is not available, skip cross-model examiner review and note it in the output.
+- If `codex exec` is not available, skip cross-model examiner review and note it in the output.

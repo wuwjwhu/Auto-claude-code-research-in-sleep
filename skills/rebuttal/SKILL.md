@@ -2,7 +2,7 @@
 name: rebuttal
 description: "Workflow 4: Submission rebuttal pipeline. Parses external reviews, enforces coverage and grounding, drafts a safe text-only rebuttal under venue limits, and manages follow-up rounds. Use when user says \"rebuttal\", \"reply to reviewers\", \"ICML rebuttal\", \"OpenReview response\", or wants to answer external reviews safely."
 argument-hint: [paper-path-or-review-bundle]
-allowed-tools: Bash(*), Read, Grep, Glob, Write, Edit, Agent, Skill, mcp__codex__codex, mcp__codex__codex-reply
+allowed-tools: Bash(*), Read, Grep, Glob, Write, Edit, Agent, Skill
 ---
 
 # Workflow 4: Rebuttal
@@ -40,10 +40,10 @@ Workflow 4:   rebuttal (post-submission external reviews)
 
 - **VENUE = `ICML`** — Default venue. Override if needed.
 - **RESPONSE_MODE = `TEXT_ONLY`** — v1 default.
-- **REVIEWER_MODEL = `gpt-5.4`** — Used via Codex MCP for internal stress-testing.
-- **REVIEWER_BACKEND = `codex`** — Default: Codex MCP (xhigh). Override with `— reviewer: oracle-pro` for GPT-5.4 Pro via Oracle MCP. See `shared-references/reviewer-routing.md`.
+- **REVIEWER_MODEL = `gpt-5.4`** — Used via `codex exec` for internal stress-testing.
+- **REVIEWER_BACKEND = `codex`** — Default: `codex exec` (xhigh). Override with `— reviewer: oracle-pro` for GPT-5.4 Pro via Oracle MCP. See `shared-references/reviewer-routing.md`.
 - **MAX_INTERNAL_DRAFT_ROUNDS = 2** — draft → lint → revise.
-- **MAX_STRESS_TEST_ROUNDS = 1** — One Codex MCP critique round.
+- **MAX_STRESS_TEST_ROUNDS = 1** — One `codex exec` critique round.
 - **MAX_FOLLOWUP_ROUNDS = 3** — per reviewer thread.
 - **AUTO_EXPERIMENT = false** — When `true`, automatically invoke `/experiment-bridge` to run supplementary experiments when the strategy plan identifies reviewer concerns that require new empirical evidence. When `false` (default), pause and present the evidence gap to the user for manual handling.
 - **QUICK_MODE = false** — When `true`, only run Phase 0-3 (parse reviews, atomize concerns, build strategy). Outputs `ISSUE_BOARD.md` + `STRATEGY_PLAN.md` and stops — no drafting, no stress test. Useful for quickly understanding what reviewers want before deciding how to respond.
@@ -211,23 +211,23 @@ Run all lints:
 5. **Consistency** — no contradictions across reviewer replies
 6. **Limit** — exact character count, compress if over (redundancy → friendly → opener → wording, never drop critical answers)
 
-### Phase 6: Codex MCP Stress Test
+### Phase 6: `codex exec` Stress Test
 
-```
-mcp__codex__codex:
-  config: {"model_reasoning_effort": "xhigh"}
-  prompt: |
-    Stress-test this rebuttal draft:
-    [raw reviews + issue board + draft + venue rules]
+```bash
+codex exec "$(cat <<'PROMPT'
+Stress-test this rebuttal draft:
+[raw reviews + issue board + draft + venue rules]
 
-    1. Unanswered or weakly answered concerns?
-    2. Unsupported factual statements?
-    3. Risky or unapproved promises?
-    4. Tone problems?
-    5. Paragraph most likely to backfire with meta-reviewer?
-    6. Minimal grounded fixes only. Do NOT invent evidence.
+1. Unanswered or weakly answered concerns?
+2. Unsupported factual statements?
+3. Risky or unapproved promises?
+4. Tone problems?
+5. Paragraph most likely to backfire with meta-reviewer?
+6. Minimal grounded fixes only. Do NOT invent evidence.
 
-    Verdict: safe to submit / needs revision
+Verdict: safe to submit / needs revision
+PROMPT
+)" --skip-git-repo-check 2>&1
 ```
 
 Save full response to `rebuttal/MCP_STRESS_TEST.md`. If hard safety blocker → revise before finalizing.
@@ -264,7 +264,7 @@ When new reviewer comments arrive:
 3. Draft **delta reply only** (not full rewrite)
 4. Update `rebuttal/REVISION_PLAN.md` in place — add any new checklist items introduced by the follow-up, tick off items the author has already completed, and keep existing items' status current
 5. Re-run safety lints
-6. Use Codex MCP reply for continuity if useful
+6. Use `codex exec` reply for continuity if useful
 7. Rules: escalate technically not rhetorically; concede if reviewer is correct; stop arguing if reviewer is immovable and no new evidence exists
 
 ## Key Rules

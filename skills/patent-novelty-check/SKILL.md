@@ -2,7 +2,7 @@
 name: patent-novelty-check
 description: "Assess patent novelty and non-obviousness against prior art. Use when user says \"专利查新\", \"patent novelty\", \"可专利性评估\", \"patentability check\", or wants to evaluate if an invention is patentable."
 argument-hint: [invention-description-or-brief-path]
-allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, Agent, WebSearch, WebFetch, mcp__codex__codex
+allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, Agent, WebSearch, WebFetch
 ---
 
 # Patent Novelty and Non-Obviousness Check
@@ -13,7 +13,7 @@ Adapted from `/novelty-check` for patent legal standards. Research novelty is NO
 
 ## Constants
 
-- `REVIEWER_MODEL = gpt-5.4` — Model used via Codex MCP for cross-model examiner verification
+- `REVIEWER_MODEL = gpt-5.4` — Model used via `codex exec` for cross-model examiner verification
 - `NOVELTY_STANDARD = patent` — Always use legal patentability standard, not research contribution standard
 
 ## Inputs
@@ -76,25 +76,25 @@ Format as a matrix:
 
 ### Step 4: Cross-Model Examiner Verification
 
-Call `REVIEWER_MODEL` via `mcp__codex__codex` with xhigh reasoning:
+Call `REVIEWER_MODEL` via `codex exec` with xhigh reasoning:
 
-```
-mcp__codex__codex:
-  config: {"model_reasoning_effort": "xhigh"}
-  prompt: |
-    You are a senior patent examiner at the [USPTO/CNIPA/EPO].
-    Examine the following invention for patentability.
+```bash
+codex exec "$(cat <<'PROMPT'
+You are a senior patent examiner at the [USPTO/CNIPA/EPO].
+Examine the following invention for patentability.
 
-    INVENTION: [invention description + preliminary claims]
+INVENTION: [invention description + preliminary claims]
 
-    PRIOR ART: [prior art references with key teachings]
+PRIOR ART: [prior art references with key teachings]
 
-    Please analyze:
-    1. Anticipation (novelty): Does any single reference anticipate any claim?
-    2. Obviousness: Can any combination of references render claims obvious?
-    3. Claim scope: Are the claims broad enough to be valuable?
-    4. Recommended amendments if any claim is rejected.
-    Be rigorous and cite specific references.
+Please analyze:
+1. Anticipation (novelty): Does any single reference anticipate any claim?
+2. Obviousness: Can any combination of references render claims obvious?
+3. Claim scope: Are the claims broad enough to be valuable?
+4. Recommended amendments if any claim is rejected.
+Be rigorous and cite specific references.
+PROMPT
+)" --skip-git-repo-check 2>&1
 ```
 
 ### Step 5: Jurisdiction-Specific Assessment
@@ -149,4 +149,4 @@ Write `patent/NOVELTY_ASSESSMENT.md`:
 - Obviousness requires BOTH: (1) a combination of references AND (2) a motivation to combine them.
 - Never assume the invention is patentable just because no identical patent exists.
 - The assessment is advisory only -- actual prosecution may reveal different prior art.
-- If `mcp__codex__codex` is not available, skip cross-model examiner review and note it in the output.
+- If `codex exec` is not available, skip cross-model examiner review and note it in the output.

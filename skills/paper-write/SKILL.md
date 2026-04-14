@@ -2,7 +2,7 @@
 name: paper-write
 description: "Draft LaTeX paper section by section from an outline. Use when user says \"写论文\", \"write paper\", \"draft LaTeX\", \"开始写\", or wants to generate LaTeX content from a paper plan."
 argument-hint: [venue-or-section]
-allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, Agent, WebSearch, WebFetch, mcp__codex__codex, mcp__codex__codex-reply
+allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, Agent, WebSearch, WebFetch
 ---
 
 # Paper Write: Section-by-Section LaTeX Generation
@@ -11,7 +11,7 @@ Draft a LaTeX paper based on: **$ARGUMENTS**
 
 ## Constants
 
-- **REVIEWER_MODEL = `gpt-5.4`** — Model used via Codex MCP for section review. Must be an OpenAI model.
+- **REVIEWER_MODEL = `gpt-5.4`** — Model used via `codex exec` for section review. Must be an OpenAI model.
 - **TARGET_VENUE = `ICLR`** — Default venue. Supported: `ICLR`, `NeurIPS`, `ICML`, `CVPR` (also ICCV/ECCV), `ACL` (also EMNLP/NAACL), `AAAI`, `ACM` (ACM MM, SIGIR, KDD, CHI, etc.), `IEEE_JOURNAL` (IEEE Transactions / Letters, e.g., T-PAMI, JSAC, TWC, TCOM, TSP, TIP), `IEEE_CONF` (IEEE conferences, e.g., ICC, GLOBECOM, INFOCOM, ICASSP). Determines style file and formatting.
 - **ANONYMOUS = true** — If true, use anonymous author block. Set `false` for camera-ready. Note: most IEEE venues do NOT use anonymous submission — set `false` for IEEE.
 - **MAX_PAGES = 9** — Main body page limit. For ML conferences: counts from first page to end of Conclusion section, references and appendix NOT counted. **For IEEE venues: references ARE counted toward the page limit.** Typical limits: IEEE journal = no strict limit (but 12-14 pages typical for Transactions, 4-5 for Letters), IEEE conference = 5-8 pages including references.
@@ -330,26 +330,25 @@ Passive voice IS acceptable for: established facts, methods where agent is irrel
 
 Send the complete draft to GPT-5.4 xhigh:
 
-```
-mcp__codex__codex:
-  model: gpt-5.4
-  config: {"model_reasoning_effort": "xhigh"}
-  prompt: |
-    Review this [VENUE] paper draft (main body, excluding appendix).
+```bash
+codex exec "$(cat <<'PROMPT'
+Review this [VENUE] paper draft (main body, excluding appendix).
 
-    Focus on:
-    1. Does each claim from the intro have supporting evidence?
-    2. Is the writing clear, concise, and free of AI-isms?
-    3. Any logical gaps or unclear explanations?
-    4. Does it fit within [MAX_PAGES] pages (to end of Conclusion)?
-    5. Is related work sufficiently comprehensive (≥1 page)?
-    6. For theory papers: are proof sketches adequate?
-    7. Are figures/tables clearly described and properly referenced?
-    8. Would a skim reader understand the contribution from the title, abstract, introduction, and Figure 1?
+Focus on:
+1. Does each claim from the intro have supporting evidence?
+2. Is the writing clear, concise, and free of AI-isms?
+3. Any logical gaps or unclear explanations?
+4. Does it fit within [MAX_PAGES] pages (to end of Conclusion)?
+5. Is related work sufficiently comprehensive (≥1 page)?
+6. For theory papers: are proof sketches adequate?
+7. Are figures/tables clearly described and properly referenced?
+8. Would a skim reader understand the contribution from the title, abstract, introduction, and Figure 1?
 
-    For each issue, specify: severity (CRITICAL/MAJOR/MINOR), location, and fix.
+For each issue, specify: severity (CRITICAL/MAJOR/MINOR), location, and fix.
 
-    [paste full draft text]
+[paste full draft text]
+PROMPT
+)" --skip-git-repo-check 2>&1
 ```
 
 Apply CRITICAL and MAJOR fixes. Document MINOR issues for the user.

@@ -2,7 +2,7 @@
 name: experiment-audit
 description: "Audit experiment integrity before claiming results. Uses cross-model review (GPT-5.4) to check for fake ground truth, score normalization fraud, phantom results, and insufficient scope. Use when user says \"审计实验\", \"check experiment integrity\", \"audit results\", \"实验诚实度\", or after experiments complete before writing claims."
 argument-hint: [experiment-dir-or-results-path]
-allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, Agent, mcp__codex__codex, mcp__codex__codex-reply
+allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, Agent
 ---
 
 # Experiment Audit: Cross-Model Integrity Verification
@@ -27,7 +27,7 @@ This follows `shared-references/reviewer-independence.md` and `shared-references
 
 ## Constants
 
-- **REVIEWER_BACKEND = `codex`** — Default: Codex MCP (xhigh). Override with `— reviewer: oracle-pro` for GPT-5.4 Pro via Oracle MCP. See `shared-references/reviewer-routing.md`.
+- **REVIEWER_BACKEND = `codex`** — Default: `codex exec` (xhigh). Override with `— reviewer: oracle-pro` for GPT-5.4 Pro via Oracle MCP. See `shared-references/reviewer-routing.md`.
 
 ## Workflow
 
@@ -47,83 +47,80 @@ Scan project directory for:
 
 **DO NOT summarize, interpret, or explain any file content.** Only collect paths.
 
-### Step 2: Send to Reviewer (GPT-5.4 via Codex MCP)
+### Step 2: Send to Reviewer (GPT-5.4 via `codex exec`)
 
 Pass ONLY file paths and the audit checklist to the reviewer. The reviewer reads everything directly.
 
-```
-mcp__codex__codex:
-  model: gpt-5.4
-  config: {"model_reasoning_effort": "xhigh"}
-  sandbox: read-only
-  cwd: [project directory]
-  prompt: |
-    You are an experiment integrity auditor. Read ALL files listed below
-    and check for the following fraud patterns.
+```bash
+codex exec "$(cat <<'PROMPT'
+You are an experiment integrity auditor. Read ALL files listed below
+and check for the following fraud patterns.
 
-    Files to read:
-    - Evaluation scripts: [list paths]
-    - Result files: [list paths]
-    - Experiment tracker: [list paths]
-    - Paper claims: [list paths]
-    - Config files: [list paths]
+Files to read:
+- Evaluation scripts: [list paths]
+- Result files: [list paths]
+- Experiment tracker: [list paths]
+- Paper claims: [list paths]
+- Config files: [list paths]
 
-    ## Audit Checklist
+## Audit Checklist
 
-    ### A. Ground Truth Provenance
-    For each evaluation script:
-    1. Where does "ground truth" / "reference" / "target" come from?
-    2. Is it loaded from the DATASET, or generated/derived from MODEL OUTPUTS?
-    3. If derived: is it explicitly labeled as proxy evaluation?
-    4. Are official eval scripts used when available for this benchmark?
-    FAIL if: GT is derived from model outputs without explicit proxy labeling.
+### A. Ground Truth Provenance
+For each evaluation script:
+1. Where does "ground truth" / "reference" / "target" come from?
+2. Is it loaded from the DATASET, or generated/derived from MODEL OUTPUTS?
+3. If derived: is it explicitly labeled as proxy evaluation?
+4. Are official eval scripts used when available for this benchmark?
+FAIL if: GT is derived from model outputs without explicit proxy labeling.
 
-    ### B. Score Normalization
-    For each metric computation:
-    1. Is any metric divided by max/min/mean of the model's OWN output?
-    2. Are raw scores reported alongside any normalized scores?
-    3. Are any scores suspiciously close to 1.0 or 100%?
-    FAIL if: Normalization denominator comes from prediction statistics.
+### B. Score Normalization
+For each metric computation:
+1. Is any metric divided by max/min/mean of the model's OWN output?
+2. Are raw scores reported alongside any normalized scores?
+3. Are any scores suspiciously close to 1.0 or 100%?
+FAIL if: Normalization denominator comes from prediction statistics.
 
-    ### C. Result File Existence
-    For each claim in the paper/narrative:
-    1. Does the referenced result file actually exist?
-    2. Does the claimed metric key exist in that file?
-    3. Does the claimed NUMBER match what's in the file?
-    4. Is the experiment tracker status DONE (not TODO/IN_PROGRESS)?
-    FAIL if: Claimed results reference nonexistent files or mismatched numbers.
+### C. Result File Existence
+For each claim in the paper/narrative:
+1. Does the referenced result file actually exist?
+2. Does the claimed metric key exist in that file?
+3. Does the claimed NUMBER match what's in the file?
+4. Is the experiment tracker status DONE (not TODO/IN_PROGRESS)?
+FAIL if: Claimed results reference nonexistent files or mismatched numbers.
 
-    ### D. Dead Code Detection
-    For each metric function defined in eval scripts:
-    1. Is it actually CALLED in any evaluation pipeline?
-    2. Does its output appear in any result file?
-    WARN if: Metric functions exist but are never called.
+### D. Dead Code Detection
+For each metric function defined in eval scripts:
+1. Is it actually CALLED in any evaluation pipeline?
+2. Does its output appear in any result file?
+WARN if: Metric functions exist but are never called.
 
-    ### E. Scope Assessment
-    1. How many scenes/datasets/configurations were actually tested?
-    2. How many seeds/runs per configuration?
-    3. Does the paper use words like "comprehensive", "extensive", "robust"?
-    4. Is the actual scope sufficient for those claims?
-    WARN if: Scope language exceeds actual evidence.
+### E. Scope Assessment
+1. How many scenes/datasets/configurations were actually tested?
+2. How many seeds/runs per configuration?
+3. Does the paper use words like "comprehensive", "extensive", "robust"?
+4. Is the actual scope sufficient for those claims?
+WARN if: Scope language exceeds actual evidence.
 
-    ### F. Evaluation Type Classification
-    Classify each evaluation as:
-    - real_gt: uses dataset-provided ground truth
-    - synthetic_proxy: uses model-generated reference
-    - self_supervised_proxy: no GT by design
-    - simulation_only: simulated environment
-    - human_eval: human judges
+### F. Evaluation Type Classification
+Classify each evaluation as:
+- real_gt: uses dataset-provided ground truth
+- synthetic_proxy: uses model-generated reference
+- self_supervised_proxy: no GT by design
+- simulation_only: simulated environment
+- human_eval: human judges
 
-    ## Output Format
+## Output Format
 
-    For each check (A-F), report:
-    - Status: PASS | WARN | FAIL
-    - Evidence: exact file:line references
-    - Details: what specifically was found
+For each check (A-F), report:
+- Status: PASS | WARN | FAIL
+- Evidence: exact file:line references
+- Details: what specifically was found
 
-    Overall verdict: PASS | WARN | FAIL
-    
-    Be thorough. Read every eval script line by line.
+Overall verdict: PASS | WARN | FAIL
+
+Be thorough. Read every eval script line by line.
+PROMPT
+)" --skip-git-repo-check 2>&1
 ```
 
 ### Step 3: Parse and Write Report (Executor — Claude)

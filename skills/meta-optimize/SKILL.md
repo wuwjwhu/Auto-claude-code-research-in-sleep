@@ -2,7 +2,7 @@
 name: meta-optimize
 description: "Analyze ARIS usage logs and propose optimizations to SKILL.md files, reviewer prompts, and workflow defaults. Outer-loop harness optimization inspired by Meta-Harness (Lee et al., 2026). Use when user says \"优化技能\", \"meta optimize\", \"improve skills\", \"分析使用记录\", or wants to optimize ARIS's own harness components based on accumulated experience."
 argument-hint: [target-skill-or-all]
-allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, Agent, mcp__codex__codex, mcp__codex__codex-reply
+allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, Agent
 ---
 
 # Meta-Optimize: Outer-Loop Harness Optimization for ARIS
@@ -125,29 +125,28 @@ For each optimization target, generate a concrete diff:
 
 Send each patch to GPT-5.4 xhigh for adversarial review:
 
-```
-mcp__codex__codex:
-  model: gpt-5.4
-  config: {"model_reasoning_effort": "xhigh"}
-  prompt: |
-    You are reviewing a proposed optimization to an ARIS SKILL.md file.
-    
-    ## Original Skill (relevant section)
-    [paste original]
-    
-    ## Proposed Patch
-    [paste diff]
-    
-    ## Evidence from Usage Log
-    [paste summary stats]
-    
-    Review this patch:
-    1. Does the evidence support the change?
-    2. Could this change hurt other use cases?
-    3. Is the change minimal and safe?
-    4. Score 1-10: should this be applied?
-    
-    If score < 7, explain what additional evidence would be needed.
+```bash
+codex exec "$(cat <<'PROMPT'
+You are reviewing a proposed optimization to an ARIS SKILL.md file.
+
+## Original Skill (relevant section)
+[paste original]
+
+## Proposed Patch
+[paste diff]
+
+## Evidence from Usage Log
+[paste summary stats]
+
+Review this patch:
+1. Does the evidence support the change?
+2. Could this change hurt other use cases?
+3. Is the change minimal and safe?
+4. Score 1-10: should this be applied?
+
+If score < 7, explain what additional evidence would be needed.
+PROMPT
+)" --skip-git-repo-check 2>&1
 ```
 
 ### Step 5: Present Results
@@ -213,7 +212,7 @@ The log at `.aris/meta/events.jsonl` contains JSONL records with these shapes:
 ```jsonl
 {"ts":"...","session":"...","event":"skill_invoke","skill":"auto-review-loop","args":"difficulty: hard"}
 {"ts":"...","session":"...","event":"PostToolUse","tool":"Bash","input_summary":"pdflatex main.tex"}
-{"ts":"...","session":"...","event":"codex_call","tool":"mcp__codex__codex","input_summary":"review..."}
+{"ts":"...","session":"...","event":"codex_call","tool":"codex exec","input_summary":"review..."}
 {"ts":"...","session":"...","event":"tool_failure","tool":"Bash","input_summary":"python train.py"}
 {"ts":"...","session":"...","event":"slash_command","command":"/auto-review-loop","args":""}
 {"ts":"...","session":"...","event":"user_prompt","prompt_preview":"change difficulty to hard"}

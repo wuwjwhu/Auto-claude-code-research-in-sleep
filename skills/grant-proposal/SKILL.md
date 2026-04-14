@@ -2,7 +2,7 @@
 name: grant-proposal
 description: "Draft a structured grant proposal from research ideas and literature. Supports KAKENHI (Japan), NSF (US), NSFC (China, including 面上/青年/优青/杰青/海外优青/重点), ERC (EU), DFG (Germany), SNSF (Switzerland), ARC (Australia), NWO (Netherlands), and generic formats. Use when user says \"write grant\", \"grant proposal\", \"申請書\", \"write KAKENHI\", \"科研費\", \"基金申请\", \"写基金\", \"NSF proposal\", or wants to turn research ideas into a funding application."
 argument-hint: [research-direction — grant-type]
-allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, WebSearch, WebFetch, Agent, Skill, mcp__codex__codex, mcp__codex__codex-reply
+allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, WebSearch, WebFetch, Agent, Skill
 ---
 
 # Grant Proposal: From Research Ideas to Fundable Application
@@ -34,7 +34,7 @@ Grant proposals argue for **future work** (feasibility + potential), not complet
 
 - **GRANT_TYPE = `KAKENHI`** — Default grant type. Supported: `KAKENHI`, `NSF`, `NSFC`, `ERC`, `DFG`, `SNSF`, `ARC`, `NWO`, `GENERIC`. Override via argument (e.g., `/grant-proposal "topic — NSF"`).
 - **GRANT_SUBTYPE = `auto`** — Sub-type within the grant agency. Examples: KAKENHI `Start-up`/`Wakate`/`Kiban-B`; NSFC `Youth`/`Excellent-Youth`/`Distinguished`/`Overseas`/`Key`; NSF `CAREER`/`CRII`/`Standard`. Auto-detected from argument or defaults to the most common sub-type.
-- **REVIEWER_MODEL = `gpt-5.4`** — Model used via Codex MCP for proposal review. Must be an OpenAI model (e.g., `gpt-5.4`, `o3`, `gpt-4o`).
+- **REVIEWER_MODEL = `gpt-5.4`** — Model used via `codex exec` for proposal review. Must be an OpenAI model (e.g., `gpt-5.4`, `o3`, `gpt-4o`).
 - **OUTPUT_FORMAT = `markdown`** — Output format. Supported: `markdown`, `latex`. LaTeX uses grant-specific templates when available.
 - **MAX_REVIEW_ROUNDS = 2** — Maximum external review-revise cycles before finalizing.
 - **OUTPUT_DIR = `grant-proposal/`** — Directory for generated proposal files.
@@ -425,57 +425,55 @@ Invoke `/research-review` on the complete draft for grant-type-specific evaluati
 - Provides ranked action items for improvement
 - All feedback saved to `grant-proposal/GRANT_REVIEW.md`
 
-> ⚠️ **Codex MCP fallback**: If `mcp__codex__codex` is not available (no OpenAI API key), skip external review. Note "External review skipped — no Codex MCP available. Consider running `/auto-review-loop-llm` separately." in GRANT_REVIEW.md. The proposal is still usable without external review.
+> ⚠️ **`codex exec` fallback**: If `codex exec` is not available (no OpenAI API key), skip external review. Note "External review skipped — no `codex exec` available. Consider running `/auto-review-loop-llm` separately." in GRANT_REVIEW.md. The proposal is still usable without external review.
 
 If `/research-review` is invoked (preferred), it handles the Codex call internally. If calling Codex directly (e.g., to maintain thread context from Phase 2):
 
 #### Round 1 (full draft review):
 
-```
-mcp__codex__codex-reply:
-  threadId: [from Phase 2]
-  config: {"model_reasoning_effort": "xhigh"}
-  prompt: |
-    Review this complete [GRANT_TYPE] [GRANT_SUBTYPE] proposal draft.
+```bash
+codex exec "$(cat <<'PROMPT'
+Review this complete [GRANT_TYPE] [GRANT_SUBTYPE] proposal draft.
 
-    Act as a [GRANT_TYPE] review panelist. Evaluate using the official criteria:
+Act as a [GRANT_TYPE] review panelist. Evaluate using the official criteria:
 
-    [INSERT GRANT-TYPE-SPECIFIC CRITERIA — see Grant Type Specifications above]
+[INSERT GRANT-TYPE-SPECIFIC CRITERIA — see Grant Type Specifications above]
 
-    For each section:
-    1. Score 1-5 (5 = excellent)
-    2. Strongest aspect
-    3. Most critical weakness
-    4. Specific fix suggestion (actionable, not vague)
+For each section:
+1. Score 1-5 (5 = excellent)
+2. Strongest aspect
+3. Most critical weakness
+4. Specific fix suggestion (actionable, not vague)
 
-    Overall assessment:
-    - Would you recommend funding? (Yes / Yes with revisions / No)
-    - Single most impactful change to improve funding chances?
-    - Any fatal flaws?
+Overall assessment:
+- Would you recommend funding? (Yes / Yes with revisions / No)
+- Single most impactful change to improve funding chances?
+- Any fatal flaws?
 
-    [PASTE FULL PROPOSAL TEXT]
+[PASTE FULL PROPOSAL TEXT]
+PROMPT
+)" --skip-git-repo-check 2>&1
 ```
 
 #### Round 2+ (after revisions):
 
 If MAX_REVIEW_ROUNDS > 1 and revisions were applied:
 
-```
-mcp__codex__codex-reply:
-  threadId: [saved from Round 1]
-  config: {"model_reasoning_effort": "xhigh"}
-  prompt: |
-    [Round N review of revised [GRANT_TYPE] [GRANT_SUBTYPE] proposal]
+```bash
+codex exec "$(cat <<'PROMPT'
+[Round N review of revised [GRANT_TYPE] [GRANT_SUBTYPE] proposal]
 
-    Since your last review, I have applied the following changes:
-    1. [Change 1]: [what was done]
-    2. [Change 2]: [what was done]
-    3. [Change 3]: [what was done]
+Since your last review, I have applied the following changes:
+1. [Change 1]: [what was done]
+2. [Change 2]: [what was done]
+3. [Change 3]: [what was done]
 
-    Please re-evaluate. Same format: section scores, overall assessment, remaining weaknesses.
-    Focus on whether the CRITICAL and MAJOR issues from Round 1 have been adequately addressed.
+Please re-evaluate. Same format: section scores, overall assessment, remaining weaknesses.
+Focus on whether the CRITICAL and MAJOR issues from Round 1 have been adequately addressed.
 
-    [PASTE REVISED PROPOSAL TEXT]
+[PASTE REVISED PROPOSAL TEXT]
+PROMPT
+)" --skip-git-repo-check 2>&1
 ```
 
 ### Phase 5: Revision & Output
@@ -487,7 +485,7 @@ Parse reviewer feedback into severity levels:
 - **MAJOR** — significant weaknesses. Fix before submission.
 - **MINOR** — suggestions for improvement. Fix if time allows.
 
-Implement CRITICAL and MAJOR fixes. If MAX_REVIEW_ROUNDS > 1, re-submit for another round via `mcp__codex__codex-reply`.
+Implement CRITICAL and MAJOR fixes. If MAX_REVIEW_ROUNDS > 1, re-submit for another round via `codex exec`.
 
 #### 5.2 Generate Output
 
@@ -587,7 +585,7 @@ Parameters can be passed inline with `—` separator. They flow to sub-skills wh
 | `max review rounds` | 2 | External review cycles | — |
 | `sources` | all | Literature sources | → `/research-lit` |
 | `arxiv download` | false | Download arXiv PDFs | → `/research-lit` |
-| `reviewer model` | gpt-5.4 | Codex review model | → Codex MCP |
+| `reviewer model` | gpt-5.4 | Codex review model | → `codex exec` |
 | `auto proceed` | false | Skip checkpoints | — |
 
 ## Composing with Other Skills

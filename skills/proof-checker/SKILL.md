@@ -2,7 +2,7 @@
 name: proof-checker
 description: Rigorous mathematical proof verification and fixing workflow. Reads a LaTeX proof, identifies gaps via cross-model review (Codex GPT-5.4 xhigh), fixes each gap with full derivations, re-reviews, and generates an audit report. Use when user says "检查证明", "verify proof", "proof check", "审证明", "check this proof", or wants rigorous mathematical verification of a theory paper.
 argument-hint: [path-to-tex-file or proof-description]
-allowed-tools: Bash(*), Read, Grep, Glob, Write, Edit, Agent, mcp__codex__codex, mcp__codex__codex-reply
+allowed-tools: Bash(*), Read, Grep, Glob, Write, Edit, Agent
 ---
 
 # Proof Checker: Rigorous Mathematical Verification & Fixing
@@ -14,8 +14,8 @@ Systematically verify a mathematical proof via cross-model adversarial review, f
 ## Constants
 
 - MAX_REVIEW_ROUNDS = 3
-- REVIEWER_MODEL = `gpt-5.4` via Codex MCP, reasoning effort always `xhigh`
-- **REVIEWER_BACKEND = `codex`** — Default: Codex MCP (xhigh). Override with `— reviewer: oracle-pro` for GPT-5.4 Pro via Oracle MCP. See `shared-references/reviewer-routing.md`.
+- REVIEWER_MODEL = `gpt-5.4` via `codex exec`, reasoning effort always `xhigh`
+- **REVIEWER_BACKEND = `codex`** — Default: `codex exec` (xhigh). Override with `— reviewer: oracle-pro` for GPT-5.4 Pro via Oracle MCP. See `shared-references/reviewer-routing.md`.
 - AUDIT_DOC: `PROOF_AUDIT.md` in project root (cumulative log)
 - REPORT_TEX: `proof_audit_report.tex` (formal before/after PDF)
 - STATE_FILE: `PROOF_CHECK_STATE.json` (for recovery)
@@ -179,49 +179,49 @@ Flag any statement where limit order is ambiguous or uniformity is unclear.
 
 Submit the **complete proof content** with the following **mandatory reviewer checklist** in the prompt:
 
+```bash
+codex exec "$(cat <<'PROMPT'
+You are performing a rigorous mathematical proof review. For EVERY theorem,
+lemma, and proposition, check ALL of the following:
+
+## MANDATORY CHECKS
+
+A. DEFINITIONS: List any symbol whose meaning is ambiguous or changes.
+B. HYPOTHESIS DISCHARGE: For each lemma/theorem APPLICATION (not statement),
+   list each hypothesis and whether it was verified, with location.
+C. INEQUALITY AUDIT: For each inequality chain, verify direction, missing
+   absolute values, missing conditions (convexity, PSD, integrability).
+D. INTERCHANGE AUDIT: Flag every limit/derivative/expectation/integral
+   interchange. State which theorem justifies it (DCT/MCT/Fubini/Leibniz)
+   and which conditions are verified/missing.
+E. PROBABILITY MODE: Track whether claims are a.s./in prob./in expectation/
+   w.h.p. Ensure transitions are justified.
+F. UNIFORMITY & CONSTANTS: For every O(·), o(·), Θ(·), ≲, state whether
+   it is uniform over all parameters. List hidden parameter dependence.
+G. EDGE/DEGENERATE CASES: Attempt to break each key lemma with a 1D,
+   low-rank, or extreme-parameter construction.
+H. DEPENDENCY CONSISTENCY: Detect cycles or forward references to unproven
+   results.
+
+## OUTPUT FORMAT (per issue)
+For each issue found, provide:
+- id: sequential number
+- status: INVALID / UNJUSTIFIED / UNDERSTATED / OVERSTATED / UNCLEAR
+- impact: GLOBAL / LOCAL / COSMETIC
+- category: [from taxonomy]
+- location: section/equation/line
+- statement: what the proof claims
+- why_invalid: why this is wrong or unjustified
+- counterexample: YES (describe) / NO / CANDIDATE (describe attempt)
+- affects: which downstream results break if this is wrong
+- minimal_fix: how to fix it
+
+[FULL PROOF CONTENT HERE]
+PROMPT
+)" --skip-git-repo-check 2>&1
 ```
-mcp__codex__codex:
-  config: {"model_reasoning_effort": "xhigh"}
-  prompt: |
-    You are performing a rigorous mathematical proof review. For EVERY theorem,
-    lemma, and proposition, check ALL of the following:
 
-    ## MANDATORY CHECKS
-
-    A. DEFINITIONS: List any symbol whose meaning is ambiguous or changes.
-    B. HYPOTHESIS DISCHARGE: For each lemma/theorem APPLICATION (not statement),
-       list each hypothesis and whether it was verified, with location.
-    C. INEQUALITY AUDIT: For each inequality chain, verify direction, missing
-       absolute values, missing conditions (convexity, PSD, integrability).
-    D. INTERCHANGE AUDIT: Flag every limit/derivative/expectation/integral
-       interchange. State which theorem justifies it (DCT/MCT/Fubini/Leibniz)
-       and which conditions are verified/missing.
-    E. PROBABILITY MODE: Track whether claims are a.s./in prob./in expectation/
-       w.h.p. Ensure transitions are justified.
-    F. UNIFORMITY & CONSTANTS: For every O(·), o(·), Θ(·), ≲, state whether
-       it is uniform over all parameters. List hidden parameter dependence.
-    G. EDGE/DEGENERATE CASES: Attempt to break each key lemma with a 1D,
-       low-rank, or extreme-parameter construction.
-    H. DEPENDENCY CONSISTENCY: Detect cycles or forward references to unproven
-       results.
-
-    ## OUTPUT FORMAT (per issue)
-    For each issue found, provide:
-    - id: sequential number
-    - status: INVALID / UNJUSTIFIED / UNDERSTATED / OVERSTATED / UNCLEAR
-    - impact: GLOBAL / LOCAL / COSMETIC
-    - category: [from taxonomy]
-    - location: section/equation/line
-    - statement: what the proof claims
-    - why_invalid: why this is wrong or unjustified
-    - counterexample: YES (describe) / NO / CANDIDATE (describe attempt)
-    - affects: which downstream results break if this is wrong
-    - minimal_fix: how to fix it
-
-    [FULL PROOF CONTENT HERE]
-```
-
-**Save the threadId.** Parse into structured issue list. Write to `PROOF_AUDIT.md`.
+**Save the full raw review output.** Parse into structured issue list. Write to `PROOF_AUDIT.md`.
 
 ### Phase 1.5: Counterexample Red Team
 
@@ -310,14 +310,14 @@ After all fixes, verify the proof as a whole:
 #### Independent second review for FATAL/CRITICAL fixes
 For any fix that resolved a FATAL or CRITICAL issue, submit the **fixed section alone** (without showing the previous critique) to a **fresh Codex thread**:
 
-```
-mcp__codex__codex:
-  config: {"model_reasoning_effort": "xhigh"}
-  prompt: |
-    Blind review of the following proof section. You have NOT seen any prior
-    review or discussion. Check every step for correctness, hidden assumptions,
-    illegal interchanges, and counterexamples.
-    [FIXED SECTION ONLY]
+```bash
+codex exec "$(cat <<'PROMPT'
+Blind review of the following proof section. You have NOT seen any prior
+review or discussion. Check every step for correctness, hidden assumptions,
+illegal interchanges, and counterexamples.
+[FIXED SECTION ONLY]
+PROMPT
+)" --skip-git-repo-check 2>&1
 ```
 
 If the blind reviewer finds new issues, re-enter Phase 2.

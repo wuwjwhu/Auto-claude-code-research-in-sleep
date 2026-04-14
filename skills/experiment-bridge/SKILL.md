@@ -2,7 +2,7 @@
 name: experiment-bridge
 description: "Workflow 1.5: Bridge between idea discovery and auto review. Reads EXPERIMENT_PLAN.md, implements experiment code, deploys to GPU, collects initial results. Use when user says \"实现实验\", \"implement experiments\", \"bridge\", \"从计划到跑实验\", \"deploy the plan\", or has an experiment plan ready to execute."
 argument-hint: [experiment-plan-path-or-topic]
-allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, Agent, Skill, mcp__codex__codex, mcp__codex__codex-reply
+allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, Agent, Skill
 ---
 
 # Workflow 1.5: Experiment Bridge
@@ -108,36 +108,36 @@ For each milestone (in order), write the experiment scripts:
 
 Before deploying, send the experiment code to GPT-5.4 xhigh for review:
 
-```
-mcp__codex__codex:
-  config: {"model_reasoning_effort": "xhigh"}
-  prompt: |
-    Review the following experiment implementation for correctness.
+```bash
+codex exec "$(cat <<'PROMPT'
+Review the following experiment implementation for correctness.
 
-    ## Experiment Plan:
-    [paste key sections from EXPERIMENT_PLAN.md]
+## Experiment Plan:
+[paste key sections from EXPERIMENT_PLAN.md]
 
-    ## Method Description:
-    [paste from FINAL_PROPOSAL.md]
+## Method Description:
+[paste from FINAL_PROPOSAL.md]
 
-    ## Implementation:
-    [paste the experiment scripts]
+## Implementation:
+[paste the experiment scripts]
 
-    Check for:
-    1. Does the code correctly implement the method described in the proposal?
-    2. Are all hyperparameters from the plan reflected in the code?
-    3. Are there any logic bugs (wrong loss function, incorrect data split, missing eval)?
-    4. Is the evaluation metric computed correctly?
-    5. **CRITICAL: Does evaluation use the dataset's actual ground truth labels — NOT another model's output as ground truth?** This is a common and severe bug.
-    6. Any potential issues (OOM risk, numerical instability, missing seeds)?
+Check for:
+1. Does the code correctly implement the method described in the proposal?
+2. Are all hyperparameters from the plan reflected in the code?
+3. Are there any logic bugs (wrong loss function, incorrect data split, missing eval)?
+4. Is the evaluation metric computed correctly?
+5. **CRITICAL: Does evaluation use the dataset's actual ground truth labels — NOT another model's output as ground truth?** This is a common and severe bug.
+6. Any potential issues (OOM risk, numerical instability, missing seeds)?
 
-    For each issue found, specify: CRITICAL / MAJOR / MINOR and the exact fix.
+For each issue found, specify: CRITICAL / MAJOR / MINOR and the exact fix.
+PROMPT
+)" --skip-git-repo-check 2>&1
 ```
 
 **On review results:**
 - **No CRITICAL issues** → proceed to Phase 3
 - **CRITICAL issues found** → fix them, then re-submit for review (max 2 rounds)
-- **Codex MCP unavailable** → skip silently, proceed to Phase 3 (graceful degradation)
+- **`codex exec` unavailable** → skip silently, proceed to Phase 3 (graceful degradation)
 
 ### Phase 3: Sanity Check (if SANITY_FIRST = true)
 

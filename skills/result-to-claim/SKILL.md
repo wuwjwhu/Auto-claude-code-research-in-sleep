@@ -1,8 +1,8 @@
 ---
 name: result-to-claim
-description: Use when experiments complete to judge what claims the results support, what they don't, and what evidence is still missing. Codex MCP evaluates results against intended claims and routes to next action (pivot, supplement, or confirm). Use after experiments finish — before writing the paper or running ablations.
+description: Use when experiments complete to judge what claims the results support, what they don't, and what evidence is still missing. `codex exec` evaluates results against intended claims and routes to next action (pivot, supplement, or confirm). Use after experiments finish — before writing the paper or running ablations.
 argument-hint: [experiment-description-or-wandb-run]
-allowed-tools: Bash(*), Read, Grep, Glob, Write, Edit, mcp__codex__codex, mcp__codex__codex-reply
+allowed-tools: Bash(*), Read, Grep, Glob, Write, Edit
 ---
 
 # Result-to-Claim Gate
@@ -39,39 +39,39 @@ Assemble the key information:
 
 Send the collected results to Codex for objective evaluation:
 
-```
-mcp__codex__codex:
-  config: {"model_reasoning_effort": "xhigh"}
-  prompt: |
-    RESULT-TO-CLAIM EVALUATION
+```bash
+codex exec "$(cat <<'PROMPT'
+RESULT-TO-CLAIM EVALUATION
 
-    I need you to judge whether experimental results support the intended claim.
+I need you to judge whether experimental results support the intended claim.
 
-    Intended claim: [the claim these experiments test]
+Intended claim: [the claim these experiments test]
 
-    Experiments run:
-    [list experiments with method, dataset, metrics]
+Experiments run:
+[list experiments with method, dataset, metrics]
 
-    Results:
-    [paste key numbers, comparison deltas, significance]
+Results:
+[paste key numbers, comparison deltas, significance]
 
-    Baselines:
-    [baseline numbers and sources — reproduced or from paper]
+Baselines:
+[baseline numbers and sources — reproduced or from paper]
 
-    Known caveats:
-    [any confounding factors, limited datasets, missing comparisons]
+Known caveats:
+[any confounding factors, limited datasets, missing comparisons]
 
-    Please evaluate:
-    1. claim_supported: yes | partial | no
-    2. what_results_support: what the data actually shows
-    3. what_results_dont_support: where the data falls short of the claim
-    4. missing_evidence: specific evidence gaps
-    5. suggested_claim_revision: if the claim should be strengthened, weakened, or reframed
-    6. next_experiments_needed: specific experiments to fill gaps (if any)
-    7. confidence: high | medium | low
+Please evaluate:
+1. claim_supported: yes | partial | no
+2. what_results_support: what the data actually shows
+3. what_results_dont_support: where the data falls short of the claim
+4. missing_evidence: specific evidence gaps
+5. suggested_claim_revision: if the claim should be strengthened, weakened, or reframed
+6. next_experiments_needed: specific experiments to fill gaps (if any)
+7. confidence: high | medium | low
 
-    Be honest. Do not inflate claims beyond what the data supports.
-    A single positive result on one dataset does not support a general claim.
+Be honest. Do not inflate claims beyond what the data supports.
+A single positive result on one dataset does not support a general claim.
+PROMPT
+)" --skip-git-repo-check 2>&1
 ```
 
 ### Step 3: Parse and Normalize
@@ -182,5 +182,5 @@ if research-wiki/ exists:
 - Do not inflate claims beyond what the data supports. If Codex says "partial", do not round up to "yes".
 - A single positive result on one dataset does not support a general claim. Be honest about scope.
 - If `confidence` is low, treat the judgment as inconclusive and add experiments rather than committing to a claim.
-- If Codex MCP is unavailable (call fails), CC makes its own judgment and marks it `[pending Codex review]` — do not block the pipeline.
+- If `codex exec` is unavailable (call fails), CC makes its own judgment and marks it `[pending Codex review]` — do not block the pipeline.
 - Always record the verdict and reasoning in findings.md, regardless of outcome.

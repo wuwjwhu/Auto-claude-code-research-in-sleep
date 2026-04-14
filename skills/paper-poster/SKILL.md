@@ -2,7 +2,7 @@
 name: paper-poster
 description: "Generate a conference poster (article + tcbposter LaTeX → A0/A1 PDF + editable PPTX + SVG) from a compiled paper. Use when user says \"做海报\", \"制作海报\", \"conference poster\", \"make poster\", \"生成poster\", \"poster session\", or wants to create a poster for a conference presentation."
 argument-hint: [paper-directory-or-venue]
-allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, Agent, mcp__codex__codex, mcp__codex__codex-reply
+allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, Agent
 ---
 
 # Paper Poster: From Paper to Conference Poster
@@ -23,7 +23,7 @@ Unlike papers (dense prose, 8-15 pages), posters are **visual-first**: one page,
 - **COLUMNS = 4** — Number of content columns. Typical: 4 for landscape A0 (IMRAD), **3 for portrait A0** (research consensus), 2 for portrait A1. Portrait A0 should NEVER use 4 columns — text becomes too narrow and unreadable.
 - **PAPER_DIR = `paper/`** — Directory containing the compiled paper (main.tex + figures/).
 - **OUTPUT_DIR = `poster/`** — Output directory for all poster files.
-- **REVIEWER_MODEL = `gpt-5.4`** — Model used via Codex MCP for poster review.
+- **REVIEWER_MODEL = `gpt-5.4`** — Model used via `codex exec` for poster review.
 - **AUTO_PROCEED = false** — At each checkpoint, **always wait for explicit user confirmation**. Set `true` only if user explicitly requests fully autonomous mode.
 - **COMPILER = `latexmk`** — LaTeX build tool.
 - **ENGINE = `pdflatex`** — LaTeX engine. Use `xelatex` for CJK text.
@@ -759,36 +759,36 @@ Append all iteration scores and feedback to `poster/POSTER_VISUAL_REVIEW.md`:
 - Decision: PASS — print-ready
 ```
 
-### Phase 6: Codex MCP Review
+### Phase 6: `codex exec` Review
 
 Send the poster content plan + key LaTeX sections to GPT-5.4 xhigh for review.
 
-```
-mcp__codex__codex:
-  config: {"model_reasoning_effort": "xhigh"}
-  prompt: |
-    Review this academic conference poster for [VENUE].
+```bash
+codex exec "$(cat <<'PROMPT'
+Review this academic conference poster for [VENUE].
 
-    Evaluate using these criteria (score 1-5 each):
+Evaluate using these criteria (score 1-5 each):
 
-    1. **Information hierarchy** — Can someone understand the contribution in 60 seconds?
-    2. **Text density** — Is it concise enough? (Target: 400-700 words total, bullet points only, NO abstract paragraph)
-    3. **Figure prominence** — Are key results visually dominant? (Target: figures occupy 40-50% of area)
-    4. **Column balance** — Are columns roughly equal height?
-    5. **Readability** — Font sizes appropriate for 1.5m distance? (Title ≥90pt, body ≥34pt)
-    6. **Narrative flow** — Does the poster tell a left-to-right story?
-    7. **Whitespace** — Is content filling the space well? No large empty gaps?
+1. **Information hierarchy** — Can someone understand the contribution in 60 seconds?
+2. **Text density** — Is it concise enough? (Target: 400-700 words total, bullet points only, NO abstract paragraph)
+3. **Figure prominence** — Are key results visually dominant? (Target: figures occupy 40-50% of area)
+4. **Column balance** — Are columns roughly equal height?
+5. **Readability** — Font sizes appropriate for 1.5m distance? (Title ≥90pt, body ≥34pt)
+6. **Narrative flow** — Does the poster tell a left-to-right story?
+7. **Whitespace** — Is content filling the space well? No large empty gaps?
 
-    Poster content:
-    [PASTE POSTER_CONTENT_PLAN.md]
+Poster content:
+[PASTE POSTER_CONTENT_PLAN.md]
 
-    LaTeX source:
-    [PASTE key sections of main.tex]
+LaTeX source:
+[PASTE key sections of main.tex]
 
-    Provide:
-    - Score for each criterion
-    - Top 3 actionable fixes (ranked by impact)
-    - Overall: Ready to print? (Yes / Needs revision / Major issues)
+Provide:
+- Score for each criterion
+- Top 3 actionable fixes (ranked by impact)
+- Overall: Ready to print? (Yes / Needs revision / Major issues)
+PROMPT
+)" --skip-git-repo-check 2>&1
 ```
 
 Apply CRITICAL and MAJOR fixes to `poster/main.tex`. Recompile if changes were made.

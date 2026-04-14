@@ -2,7 +2,7 @@
 name: specification-writing
 description: "Write the full patent specification from claims and invention disclosure. Use when user says \"撰写说明书\", \"write specification\", \"写说明书\", \"patent description\", or wants to draft the complete patent specification."
 argument-hint: [claims-path]
-allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, Agent, Skill, WebSearch, WebFetch, mcp__codex__codex, mcp__codex__codex-reply
+allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, Agent, Skill, WebSearch, WebFetch
 ---
 
 # Specification Writing: Section-by-Section Patent Description
@@ -152,23 +152,23 @@ If any element lacks support, add the necessary description before proceeding.
 
 ### Step 10: Cross-Model Review
 
-Call `REVIEWER_MODEL` via `mcp__codex__codex` with xhigh reasoning:
+Call `REVIEWER_MODEL` via `codex exec` with xhigh reasoning:
 
-```
-mcp__codex__codex:
-  config: {"model_reasoning_effort": "xhigh"}
-  prompt: |
-    You are a patent examiner reviewing a specification for completeness.
-    CLAIMS: [all claims]
-    SPECIFICATION: [all specification sections]
+```bash
+codex exec "$(cat <<'PROMPT'
+You are a patent examiner reviewing a specification for completeness.
+CLAIMS: [all claims]
+SPECIFICATION: [all specification sections]
 
-    Check for:
-    1. Written description support: Does every claim element have explicit or inherent support?
-    2. Enablement: Can a POSITA practice the invention from this specification?
-    3. Consistency: Do reference numerals match across figures and specification?
-    4. Language quality: Any subjective terms, relative terms without definition, or result-to-be-achieved language?
-    5. Missing embodiments: Are there claim features that need additional embodiments?
-    6. Background deficiencies: Are they technical and specific enough?
+Check for:
+1. Written description support: Does every claim element have explicit or inherent support?
+2. Enablement: Can a POSITA practice the invention from this specification?
+3. Consistency: Do reference numerals match across figures and specification?
+4. Language quality: Any subjective terms, relative terms without definition, or result-to-be-achieved language?
+5. Missing embodiments: Are there claim features that need additional embodiments?
+6. Background deficiencies: Are they technical and specific enough?
+PROMPT
+)" --skip-git-repo-check 2>&1
 ```
 
 ### Step 11: Output
@@ -207,4 +207,4 @@ Summary file: `patent/specification/SPECIFICATION_INDEX.md` with:
 - Background section describes specific deficiencies, not general "need for improvement."
 - Multiple embodiments strengthen the specification but are not always required.
 - Large file handling: if a Write operation fails, retry with Bash `cat <<'EOF'` heredoc.
-- If `mcp__codex__codex` is not available, skip cross-model review and note it in the output.
+- If `codex exec` is not available, skip cross-model review and note it in the output.

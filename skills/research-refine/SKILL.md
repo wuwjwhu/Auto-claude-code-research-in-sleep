@@ -1,7 +1,7 @@
 ---
 name: research-refine
 description: 'Turn a vague research direction into a problem-anchored, elegant, frontier-aware, implementation-oriented method plan via iterative GPT-5.4 review. Use when the user says "refine my approach", "帮我细化方案", "decompose this problem", "打磨idea", "refine research plan", "细化研究方案", or wants a concrete research method that stays simple, focused, and top-venue ready instead of a vague or overbuilt idea.'
-allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, WebSearch, WebFetch, Agent, mcp__codex__codex, mcp__codex__codex-reply
+allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, WebSearch, WebFetch, Agent
 ---
 
 # Research Refine: Problem-Anchored, Elegant, Frontier-Aware Plan Refinement
@@ -33,7 +33,7 @@ User input (PROBLEM + vague APPROACH)
 
 ## Constants
 
-- **REVIEWER_MODEL = `gpt-5.4`** — Reviewer model used via Codex MCP.
+- **REVIEWER_MODEL = `gpt-5.4`** — Reviewer model used via `codex exec`.
 - **MAX_ROUNDS = 5** — Maximum review-revise rounds.
 - **SCORE_THRESHOLD = 9** — Minimum overall score to stop.
 - **OUTPUT_DIR = `refine-logs/`** — Directory for round files and final report.
@@ -317,78 +317,77 @@ Use this structure:
 
 Send the full proposal to GPT-5.4 for an **elegance-first, frontier-aware, method-first** review. The reviewer should spend most of the critique budget on the method itself, not on expanding the experiment menu.
 
+```bash
+codex exec "$(cat <<'PROMPT'
+You are a senior ML reviewer for a top venue (NeurIPS/ICML/ICLR).
+This is an early-stage, method-first research proposal.
+
+Your job is NOT to reward extra modules, contribution sprawl, or a giant benchmark checklist.
+Your job IS to stress-test whether the proposed method:
+(1) still solves the original anchored problem,
+(2) is concrete enough to implement,
+(3) presents a focused, elegant contribution,
+(4) uses foundation-model-era techniques appropriately when they are the natural fit.
+
+Review principles:
+- Prefer the smallest adequate mechanism over a larger system.
+- Penalize parallel contributions that make the paper feel unfocused.
+- If a modern LLM / VLM / Diffusion / RL route would clearly produce a better paper, say so concretely.
+- If the proposal is already modern enough, do NOT force trendy components.
+- Do not ask for extra experiments unless they are needed to prove the core claims.
+
+Read the Problem Anchor first. If your suggested fix would change the problem being solved,
+call that out explicitly as drift instead of treating it as a normal revision request.
+
+=== PROPOSAL ===
+[Paste the FULL proposal from Phase 1]
+=== END PROPOSAL ===
+
+Score these 7 dimensions from 1-10:
+
+1. **Problem Fidelity**: Does the method still attack the original bottleneck, or has it drifted into solving something easier or different?
+
+2. **Method Specificity**: Are the interfaces, representations, losses, training stages, and inference path concrete enough that an engineer could start implementing?
+
+3. **Contribution Quality**: Is there one dominant mechanism-level contribution with real novelty, good parsimony, and no obvious contribution sprawl?
+
+4. **Frontier Leverage**: Does the proposal use current foundation-model-era primitives appropriately when they are the right tool, instead of defaulting to old-school module stacking?
+
+5. **Feasibility**: Can this method be trained and integrated with the stated resources and data assumptions?
+
+6. **Validation Focus**: Are the proposed experiments minimal but sufficient to validate the core claims? Is there unnecessary experimental bloat?
+
+7. **Venue Readiness**: If executed well, would the contribution feel sharp and timely enough for a top venue?
+
+**OVERALL SCORE** (1-10): Weighted toward Problem Fidelity, Method Specificity, Contribution Quality, and Frontier Leverage.
+Use this weighting: Problem Fidelity 15%, Method Specificity 25%, Contribution Quality 25%, Frontier Leverage 15%, Feasibility 10%, Validation Focus 5%, Venue Readiness 5%.
+
+For each dimension scoring < 7, provide:
+- The specific weakness
+- A concrete fix at the method level (interface / loss / training recipe / integration point / deletion of unnecessary parts)
+- Priority: CRITICAL / IMPORTANT / MINOR
+
+Then add:
+- **Simplification Opportunities**: 1-3 concrete ways to delete, merge, or reuse components while preserving the main claim. Write "NONE" if already tight.
+- **Modernization Opportunities**: 1-3 concrete ways to replace old-school pieces with more natural foundation-model-era primitives if genuinely better. Write "NONE" if already modern enough.
+- **Drift Warning**: "NONE" if the proposal still solves the anchored problem; otherwise explain the drift clearly.
+- **Verdict**: READY / REVISE / RETHINK
+
+Verdict rule:
+- READY: overall score >= 9, no meaningful drift, one focused dominant contribution, and no obvious complexity bloat remains
+- REVISE: the direction is promising but not yet at READY bar
+- RETHINK: the core mechanism or framing is still fundamentally off
+PROMPT
+)" --skip-git-repo-check 2>&1
 ```
-mcp__codex__codex:
-  model: REVIEWER_MODEL
-  config: {"model_reasoning_effort": "xhigh"}
-  prompt: |
-    You are a senior ML reviewer for a top venue (NeurIPS/ICML/ICLR).
-    This is an early-stage, method-first research proposal.
 
-    Your job is NOT to reward extra modules, contribution sprawl, or a giant benchmark checklist.
-    Your job IS to stress-test whether the proposed method:
-    (1) still solves the original anchored problem,
-    (2) is concrete enough to implement,
-    (3) presents a focused, elegant contribution,
-    (4) uses foundation-model-era techniques appropriately when they are the natural fit.
-
-    Review principles:
-    - Prefer the smallest adequate mechanism over a larger system.
-    - Penalize parallel contributions that make the paper feel unfocused.
-    - If a modern LLM / VLM / Diffusion / RL route would clearly produce a better paper, say so concretely.
-    - If the proposal is already modern enough, do NOT force trendy components.
-    - Do not ask for extra experiments unless they are needed to prove the core claims.
-
-    Read the Problem Anchor first. If your suggested fix would change the problem being solved,
-    call that out explicitly as drift instead of treating it as a normal revision request.
-
-    === PROPOSAL ===
-    [Paste the FULL proposal from Phase 1]
-    === END PROPOSAL ===
-
-    Score these 7 dimensions from 1-10:
-
-    1. **Problem Fidelity**: Does the method still attack the original bottleneck, or has it drifted into solving something easier or different?
-
-    2. **Method Specificity**: Are the interfaces, representations, losses, training stages, and inference path concrete enough that an engineer could start implementing?
-
-    3. **Contribution Quality**: Is there one dominant mechanism-level contribution with real novelty, good parsimony, and no obvious contribution sprawl?
-
-    4. **Frontier Leverage**: Does the proposal use current foundation-model-era primitives appropriately when they are the right tool, instead of defaulting to old-school module stacking?
-
-    5. **Feasibility**: Can this method be trained and integrated with the stated resources and data assumptions?
-
-    6. **Validation Focus**: Are the proposed experiments minimal but sufficient to validate the core claims? Is there unnecessary experimental bloat?
-
-    7. **Venue Readiness**: If executed well, would the contribution feel sharp and timely enough for a top venue?
-
-    **OVERALL SCORE** (1-10): Weighted toward Problem Fidelity, Method Specificity, Contribution Quality, and Frontier Leverage.
-    Use this weighting: Problem Fidelity 15%, Method Specificity 25%, Contribution Quality 25%, Frontier Leverage 15%, Feasibility 10%, Validation Focus 5%, Venue Readiness 5%.
-
-    For each dimension scoring < 7, provide:
-    - The specific weakness
-    - A concrete fix at the method level (interface / loss / training recipe / integration point / deletion of unnecessary parts)
-    - Priority: CRITICAL / IMPORTANT / MINOR
-
-    Then add:
-    - **Simplification Opportunities**: 1-3 concrete ways to delete, merge, or reuse components while preserving the main claim. Write "NONE" if already tight.
-    - **Modernization Opportunities**: 1-3 concrete ways to replace old-school pieces with more natural foundation-model-era primitives if genuinely better. Write "NONE" if already modern enough.
-    - **Drift Warning**: "NONE" if the proposal still solves the anchored problem; otherwise explain the drift clearly.
-    - **Verdict**: READY / REVISE / RETHINK
-
-    Verdict rule:
-    - READY: overall score >= 9, no meaningful drift, one focused dominant contribution, and no obvious complexity bloat remains
-    - REVISE: the direction is promising but not yet at READY bar
-    - RETHINK: the core mechanism or framing is still fundamentally off
-```
-
-**CRITICAL: Save the `threadId`** from this call for all later rounds.
+**CRITICAL: Save the FULL raw review output** from this call for all later rounds.
 
 **CRITICAL: Save the FULL raw response** verbatim.
 
 Save review to `refine-logs/round-1-review.md` with the raw response in a `<details>` block.
 
-**Checkpoint:** Update `refine-logs/REFINE_STATE.json` with `{"phase": "review", "round": 1, "threadId": "<saved>", "last_score": <parsed>, "last_verdict": "<parsed>", ...}`.
+**Checkpoint:** Update `refine-logs/REFINE_STATE.json` with `{"phase": "review", "round": 1, "last_score": <parsed>, "last_verdict": "<parsed>", ...}`.
 
 ### Phase 3: Parse Feedback and Revise the Method
 
@@ -496,42 +495,40 @@ Save to `refine-logs/round-N-refinement.md`:
 
 Send the revised proposal back to GPT-5.4 in the **same thread**:
 
-```
-mcp__codex__codex-reply:
-  threadId: [saved from Phase 2]
-  model: REVIEWER_MODEL
-  config: {"model_reasoning_effort": "xhigh"}
-  prompt: |
-    [Round N re-evaluation]
+```bash
+codex exec "$(cat <<'PROMPT'
+[Round N re-evaluation]
 
-    I revised the proposal based on your feedback.
-    First, check whether the original Problem Anchor is still preserved.
-    Second, judge whether the method is now more concrete, more focused, and more current.
+I revised the proposal based on your feedback.
+First, check whether the original Problem Anchor is still preserved.
+Second, judge whether the method is now more concrete, more focused, and more current.
 
-    Key changes:
-    1. [Method change 1]
-    2. [Method change 2]
-    3. [Simplification / modernization / pushback if any]
+Key changes:
+1. [Method change 1]
+2. [Method change 2]
+3. [Simplification / modernization / pushback if any]
 
-    === REVISED PROPOSAL ===
-    [Paste the FULL revised proposal]
-    === END REVISED PROPOSAL ===
+=== REVISED PROPOSAL ===
+[Paste the FULL revised proposal]
+=== END REVISED PROPOSAL ===
 
-    Please:
-    - Re-score the same 7 dimensions and overall
-    - State whether the Problem Anchor is preserved or drifted
-    - State whether the dominant contribution is now sharper or still too broad
-    - State whether the method is simpler or still overbuilt
-    - State whether the frontier leverage is now appropriate or still old-school / forced
-    - Focus new critiques on missing mechanism, weak training signal, weak integration point, pseudo-novelty, or unnecessary complexity
-    - Use the same verdict rule: READY only if overall score >= 9 and no blocking issue remains
+Please:
+- Re-score the same 7 dimensions and overall
+- State whether the Problem Anchor is preserved or drifted
+- State whether the dominant contribution is now sharper or still too broad
+- State whether the method is simpler or still overbuilt
+- State whether the frontier leverage is now appropriate or still old-school / forced
+- Focus new critiques on missing mechanism, weak training signal, weak integration point, pseudo-novelty, or unnecessary complexity
+- Use the same verdict rule: READY only if overall score >= 9 and no blocking issue remains
 
-    Same output format: 7 scores, overall score, verdict, drift warning, simplification opportunities, modernization opportunities, remaining action items.
+Same output format: 7 scores, overall score, verdict, drift warning, simplification opportunities, modernization opportunities, remaining action items.
+PROMPT
+)" --skip-git-repo-check 2>&1
 ```
 
 Save review to `refine-logs/round-N-review.md`.
 
-**Checkpoint:** Update `refine-logs/REFINE_STATE.json` with `{"phase": "review", "round": N, "threadId": "<saved>", "last_score": <parsed>, "last_verdict": "<parsed>", ...}`.
+**Checkpoint:** Update `refine-logs/REFINE_STATE.json` with `{"phase": "review", "round": N, "last_score": <parsed>, "last_verdict": "<parsed>", ...}`.
 
 Then return to Phase 3 until:
 
@@ -712,7 +709,7 @@ Suggested next step: /experiment-plan
 - **Review the mechanism, not the parts count.** A long module list is not novelty.
 - **Pushback is encouraged.** If reviewer feedback causes drift or unnecessary complexity, argue back with evidence.
 - **ALWAYS use `config: {"model_reasoning_effort": "xhigh"}`** for all Codex review calls.
-- **Save `threadId` from Phase 2** and use `mcp__codex__codex-reply` for later rounds.
+- **Save `threadId` from Phase 2** and use `codex exec` for later rounds.
 - **Do not fabricate results.** Only describe expected evidence and planned experiments.
 - **Be specific about compute and data assumptions.** Vague "we'll train a model" is not enough.
 - **Document everything.** Save every raw review, every anchor check, every simplicity check, and every major method change.

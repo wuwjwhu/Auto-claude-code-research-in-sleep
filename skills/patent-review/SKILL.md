@@ -2,10 +2,10 @@
 name: patent-review
 description: "Get an external patent examiner review of a patent application. Use when user says \"专利审查\", \"patent review\", \"审查意见\", \"examiner review\", or wants critical feedback on patent claims and specification."
 argument-hint: [patent-directory-or-scope]
-allowed-tools: Bash(*), Read, Grep, Glob, Write, Edit, Agent, mcp__codex__codex, mcp__codex__codex-reply
+allowed-tools: Bash(*), Read, Grep, Glob, Write, Edit, Agent
 ---
 
-# Patent Examiner Review via Codex MCP (xhigh reasoning)
+# Patent Examiner Review via `codex exec` (xhigh reasoning)
 
 Get a multi-round patent examiner review of the patent application based on: **$ARGUMENTS**
 
@@ -13,15 +13,15 @@ Adapted from `/research-review`. The reviewer persona is a patent examiner, not 
 
 ## Constants
 
-- `REVIEWER_MODEL = gpt-5.4` — Model used via Codex MCP
+- `REVIEWER_MODEL = gpt-5.4` — Model used via `codex exec`
 - `REVIEW_ROUNDS = 2` — Number of review rounds
 - `EXAMINER_PERSONA = "patent-examiner"` — GPT-5.4 persona
 
 ## Prerequisites
 
-- Codex MCP Server configured:
+- Codex CLI configured:
   ```bash
-  claude mcp add codex -s user -- codex mcp-server
+  codex login
   ```
 
 ## Inputs
@@ -44,66 +44,66 @@ Before calling the external reviewer, compile a comprehensive briefing:
 
 ### Step 2: Round 1 — Full Examiner Review
 
-Send to `REVIEWER_MODEL` via `mcp__codex__codex` with xhigh reasoning:
+Send to `REVIEWER_MODEL` via `codex exec` with xhigh reasoning:
 
-```
-mcp__codex__codex:
-  config: {"model_reasoning_effort": "xhigh"}
-  prompt: |
-    You are a senior patent examiner at the [USPTO/CNIPA/EPO].
-    Examine this patent application and issue a detailed office action.
+```bash
+codex exec "$(cat <<'PROMPT'
+You are a senior patent examiner at the [USPTO/CNIPA/EPO].
+Examine this patent application and issue a detailed office action.
 
-    CLAIMS:
-    [all claims]
+CLAIMS:
+[all claims]
 
-    SPECIFICATION SUMMARY:
-    [key sections: title, technical field, background, summary, abstract]
+SPECIFICATION SUMMARY:
+[key sections: title, technical field, background, summary, abstract]
 
-    PRIOR ART KNOWN:
-    [prior art references]
+PRIOR ART KNOWN:
+[prior art references]
 
-    PATENTABILITY STANDARDS TO APPLY:
-    [US: 35 USC 101/102/103/112 | CN: Articles 22, 26 | EP: Articles 54, 56, 83, 84]
+PATENTABILITY STANDARDS TO APPLY:
+[US: 35 USC 101/102/103/112 | CN: Articles 22, 26 | EP: Articles 54, 56, 83, 84]
 
-    Please issue an office action covering:
+Please issue an office action covering:
 
-    1. CLAIM CLARITY (112(b)/Art 84):
-       - Are all terms definite?
-       - Any indefinite functional language?
-       - Antecedent basis issues?
+1. CLAIM CLARITY (112(b)/Art 84):
+   - Are all terms definite?
+   - Any indefinite functional language?
+   - Antecedent basis issues?
 
-    2. WRITTEN DESCRIPTION (112(a)/Art 83 first para):
-       - Does the spec support ALL claim scope?
-       - Any claim elements without spec support?
+2. WRITTEN DESCRIPTION (112(a)/Art 83 first para):
+   - Does the spec support ALL claim scope?
+   - Any claim elements without spec support?
 
-    3. ENABLEMENT (112(a)/Art 83):
-       - Can a POSITA practice the invention?
-       - Any missing algorithm/structure for functional claims?
+3. ENABLEMENT (112(a)/Art 83):
+   - Can a POSITA practice the invention?
+   - Any missing algorithm/structure for functional claims?
 
-    4. NOVELTY (102/Art 54):
-       - Would any known reference anticipate any claim?
-       - Identify the closest single reference.
+4. NOVELTY (102/Art 54):
+   - Would any known reference anticipate any claim?
+   - Identify the closest single reference.
 
-    5. NON-OBVIOUSNESS (103/Art 56):
-       - Would any combination render claims obvious?
-       - What is the motivation to combine?
+5. NON-OBVIOUSNESS (103/Art 56):
+   - Would any combination render claims obvious?
+   - What is the motivation to combine?
 
-    6. CLAIM SCOPE:
-       - Are independent claims broad enough to be commercially valuable?
-       - Do dependent claims provide meaningful fallback positions?
-       - Any claims that are too broad (likely rejected) or too narrow (not valuable)?
+6. CLAIM SCOPE:
+   - Are independent claims broad enough to be commercially valuable?
+   - Do dependent claims provide meaningful fallback positions?
+   - Any claims that are too broad (likely rejected) or too narrow (not valuable)?
 
-    7. SPECIFICATION QUALITY:
-       - Language issues (subjective terms, relative terms, result-to-be-achieved)
-       - Reference numeral consistency
-       - Missing embodiments
+7. SPECIFICATION QUALITY:
+   - Language issues (subjective terms, relative terms, result-to-be-achieved)
+   - Reference numeral consistency
+   - Missing embodiments
 
-    Format your response as a formal office action with:
-    - GROUNDS OF REJECTION for each issue (cite statute)
-    - SUGGESTED AMENDMENTS for each issue
-    - OVERALL PATENTABILITY SCORE: 1-10
+Format your response as a formal office action with:
+- GROUNDS OF REJECTION for each issue (cite statute)
+- SUGGESTED AMENDMENTS for each issue
+- OVERALL PATENTABILITY SCORE: 1-10
 
-    Be rigorous and specific. This is a real examination.
+Be rigorous and specific. This is a real examination.
+PROMPT
+)" --skip-git-repo-check 2>&1
 ```
 
 ### Step 3: Implement Fixes (Round 1)
@@ -128,28 +128,28 @@ For each fix:
 
 ### Step 4: Round 2 — Follow-Up Review
 
-Use `mcp__codex__codex` with the threadId from Round 1:
+Use `codex exec` with the threadId from Round 1:
 
-```
-mcp__codex__codex:
-  threadId: [from Round 1]
-  prompt: |
-    Here is the revised patent application after addressing your office action.
+```bash
+codex exec "$(cat <<'PROMPT'
+Here is the revised patent application after addressing your office action.
 
-    CHANGES MADE:
-    [list of all changes with rationale]
+CHANGES MADE:
+[list of all changes with rationale]
 
-    REVISED CLAIMS:
-    [updated claims]
+REVISED CLAIMS:
+[updated claims]
 
-    REVISED SPECIFICATION EXCERPTS:
-    [changed sections]
+REVISED SPECIFICATION EXCERPTS:
+[changed sections]
 
-    Please re-examine:
-    1. Are the previous rejections overcome?
-    2. Are there new issues introduced by the amendments?
-    3. What is the updated patentability score?
-    4. Any remaining grounds for rejection?
+Please re-examine:
+1. Are the previous rejections overcome?
+2. Are there new issues introduced by the amendments?
+3. What is the updated patentability score?
+4. Any remaining grounds for rejection?
+PROMPT
+)" --skip-git-repo-check 2>&1
 ```
 
 ### Step 5: Generate Improvement Report

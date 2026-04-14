@@ -1,8 +1,8 @@
 ---
 name: auto-review-loop
-description: Autonomous multi-round research review loop. Repeatedly reviews via Codex MCP, implements fixes, and re-reviews until positive assessment or max rounds reached. Use when user says "auto review loop", "review until it passes", or wants autonomous iterative improvement.
+description: Autonomous multi-round research review loop. Repeatedly reviews via `codex exec`, implements fixes, and re-reviews until positive assessment or max rounds reached. Use when user says "auto review loop", "review until it passes", or wants autonomous iterative improvement.
 argument-hint: [topic-or-scope]
-allowed-tools: Bash(*), Read, Grep, Glob, Write, Edit, Agent, Skill, mcp__codex__codex, mcp__codex__codex-reply
+allowed-tools: Bash(*), Read, Grep, Glob, Write, Edit, Agent, Skill
 ---
 
 # Auto Review Loop: Autonomous Research Improvement
@@ -16,13 +16,13 @@ Autonomously iterate: review → implement fixes → re-review, until the extern
 - MAX_ROUNDS = 4
 - POSITIVE_THRESHOLD: score >= 6/10, or verdict contains "accept", "sufficient", "ready for submission"
 - REVIEW_DOC: `review-stage/AUTO_REVIEW.md` (cumulative log) *(fall back to `./AUTO_REVIEW.md` for legacy projects)*
-- REVIEWER_MODEL = `gpt-5.4` — Model used via Codex MCP. Must be an OpenAI model (e.g., `gpt-5.4`, `o3`, `gpt-4o`)
-- **REVIEWER_BACKEND = `codex`** — Default: Codex MCP (xhigh). Override with `— reviewer: oracle-pro` for GPT-5.4 Pro via Oracle MCP. See `shared-references/reviewer-routing.md`.
+- REVIEWER_MODEL = `gpt-5.4` — Model used via `codex exec`. Must be an OpenAI model (e.g., `gpt-5.4`, `o3`, `gpt-4o`)
+- **REVIEWER_BACKEND = `codex`** — Default: `codex exec` (xhigh). Override with `— reviewer: oracle-pro` for GPT-5.4 Pro via Oracle MCP. See `shared-references/reviewer-routing.md`.
 - **OUTPUT_DIR = `review-stage/`** — All review-stage outputs go here. Create the directory if it doesn't exist.
 - **HUMAN_CHECKPOINT = false** — When `true`, pause after each round's review (Phase B) and present the score + weaknesses to the user. Wait for user input before proceeding to Phase C. The user can: approve the suggested fixes, provide custom modification instructions, skip specific fixes, or stop the loop early. When `false` (default), the loop runs fully autonomously.
 - **COMPACT = false** — When `true`, (1) read `EXPERIMENT_LOG.md` and `findings.md` instead of parsing full logs on session recovery, (2) append key findings to `findings.md` after each round.
 - **REVIEWER_DIFFICULTY = medium** — Controls how adversarial the reviewer is. Three levels:
-  - `medium` (default): Current behavior — MCP-based review, Claude controls what context GPT sees.
+  - `medium` (default): Current behavior — `codex exec`-based review, Claude controls what context GPT sees.
   - `hard`: Adds **Reviewer Memory** (GPT tracks its own suspicions across rounds) + **Debate Protocol** (Claude can rebut, GPT rules).
   - `nightmare`: Everything in `hard` + **GPT reads the repo directly** via `codex exec` (Claude cannot filter what GPT sees) + **Adversarial Verification** (GPT independently checks if code matches claims).
 
@@ -82,65 +82,65 @@ Long-running loops may hit the context window limit, triggering automatic compac
 
 **Route by REVIEWER_DIFFICULTY:**
 
-##### Medium (default) — MCP Review
+##### Medium (default) — `codex exec` Review
 
 Send comprehensive context to the external reviewer:
 
+```bash
+codex exec "$(cat <<'PROMPT'
+[Round N/MAX_ROUNDS of autonomous review loop]
+
+[Full research context: claims, methods, results, known weaknesses]
+[Changes since last round, if any]
+
+Please act as a senior ML reviewer (NeurIPS/ICML level).
+
+1. Score this work 1-10 for a top venue
+2. List remaining critical weaknesses (ranked by severity)
+3. For each weakness, specify the MINIMUM fix (experiment, analysis, or reframing)
+4. State clearly: is this READY for submission? Yes/No/Almost
+
+Be brutally honest. If the work is ready, say so clearly.
+PROMPT
+)" --skip-git-repo-check 2>&1
 ```
-mcp__codex__codex:
-  config: {"model_reasoning_effort": "xhigh"}
-  prompt: |
-    [Round N/MAX_ROUNDS of autonomous review loop]
 
-    [Full research context: claims, methods, results, known weaknesses]
-    [Changes since last round, if any]
+If this is round 2+, re-run `codex exec` with the prior review, your rebuttal, and the latest project state pasted into the prompt.
 
-    Please act as a senior ML reviewer (NeurIPS/ICML level).
-
-    1. Score this work 1-10 for a top venue
-    2. List remaining critical weaknesses (ranked by severity)
-    3. For each weakness, specify the MINIMUM fix (experiment, analysis, or reframing)
-    4. State clearly: is this READY for submission? Yes/No/Almost
-
-    Be brutally honest. If the work is ready, say so clearly.
-```
-
-If this is round 2+, use `mcp__codex__codex-reply` with the saved threadId to maintain conversation context.
-
-##### Hard — MCP Review + Reviewer Memory
+##### Hard — `codex exec` Review + Reviewer Memory
 
 Same as medium, but **prepend Reviewer Memory** to the prompt:
 
-```
-mcp__codex__codex:
-  config: {"model_reasoning_effort": "xhigh"}
-  prompt: |
-    [Round N/MAX_ROUNDS of autonomous review loop]
+```bash
+codex exec "$(cat <<'PROMPT'
+[Round N/MAX_ROUNDS of autonomous review loop]
 
-    ## Your Reviewer Memory (persistent across rounds)
-    [Paste full contents of REVIEWER_MEMORY.md here]
+## Your Reviewer Memory (persistent across rounds)
+[Paste full contents of REVIEWER_MEMORY.md here]
 
-    IMPORTANT: You have memory from prior rounds. Check whether your
-    previous suspicions were genuinely addressed or merely sidestepped.
-    The author (Claude) controls what context you see — be skeptical
-    of convenient omissions.
+IMPORTANT: You have memory from prior rounds. Check whether your
+previous suspicions were genuinely addressed or merely sidestepped.
+The author (Claude) controls what context you see — be skeptical
+of convenient omissions.
 
-    [Full research context, changes since last round...]
+[Full research context, changes since last round...]
 
-    Please act as a senior ML reviewer (NeurIPS/ICML level).
-    1. Score this work 1-10 for a top venue
-    2. List remaining critical weaknesses (ranked by severity)
-    3. For each weakness, specify the MINIMUM fix
-    4. State clearly: is this READY for submission? Yes/No/Almost
-    5. **Memory update**: List any new suspicions, unresolved concerns,
-       or patterns you want to track in future rounds.
+Please act as a senior ML reviewer (NeurIPS/ICML level).
+1. Score this work 1-10 for a top venue
+2. List remaining critical weaknesses (ranked by severity)
+3. For each weakness, specify the MINIMUM fix
+4. State clearly: is this READY for submission? Yes/No/Almost
+5. **Memory update**: List any new suspicions, unresolved concerns,
+   or patterns you want to track in future rounds.
 
-    Be brutally honest. Actively look for things the author might be hiding.
+Be brutally honest. Actively look for things the author might be hiding.
+PROMPT
+)" --skip-git-repo-check 2>&1
 ```
 
 ##### Nightmare — Codex Exec (GPT reads repo directly)
 
-**Do NOT use MCP.** Instead, let GPT access the repo autonomously via `codex exec`:
+Use `codex exec` so GPT can access the repo autonomously:
 
 ```bash
 codex exec "$(cat <<'PROMPT'
@@ -241,21 +241,20 @@ Rules for Claude's rebuttal:
 Send Claude's rebuttal back to GPT for a ruling:
 
 *Hard mode (MCP):*
-```
-mcp__codex__codex-reply:
-  threadId: [saved]
-  config: {"model_reasoning_effort": "xhigh"}
-  prompt: |
-    The author rebuts your review:
+```bash
+codex exec "$(cat <<'PROMPT'
+The author rebuts your review:
 
-    [paste Claude's rebuttal]
+[paste Claude's rebuttal]
 
-    For each rebuttal, rule:
-    - SUSTAINED (author's argument is valid, withdraw this weakness)
-    - OVERRULED (your original criticism stands, explain why)
-    - PARTIALLY SUSTAINED (revise the weakness to a narrower scope)
+For each rebuttal, rule:
+- SUSTAINED (author's argument is valid, withdraw this weakness)
+- OVERRULED (your original criticism stands, explain why)
+- PARTIALLY SUSTAINED (revise the weakness to a narrower scope)
 
-    Then update your score if any weaknesses were withdrawn.
+Then update your score if any weaknesses were withdrawn.
+PROMPT
+)" --skip-git-repo-check 2>&1
 ```
 
 *Nightmare mode (codex exec):*
@@ -425,7 +424,7 @@ When loop ends (positive assessment or max rounds):
 - **Large file handling**: If the Write tool fails due to file size, immediately retry using Bash (`cat << 'EOF' > file`) to write in chunks. Do NOT ask the user for permission — just do it silently.
 
 - ALWAYS use `config: {"model_reasoning_effort": "xhigh"}` for maximum reasoning depth
-- Save threadId from first call, use `mcp__codex__codex-reply` for subsequent rounds
+- Save the raw review output from the first call and paste the relevant excerpts into subsequent `codex exec` prompts
 - **Anti-hallucination citations**: When adding references during fixes, NEVER fabricate BibTeX. Use the same DBLP → CrossRef → `[VERIFY]` chain as `/paper-write`: (1) `curl -s "https://dblp.org/search/publ/api?q=TITLE&format=json"` → get key → `curl -s "https://dblp.org/rec/{key}.bib"`, (2) if not found, `curl -sLH "Accept: application/x-bibtex" "https://doi.org/{doi}"`, (3) if both fail, mark with `% [VERIFY]`. Do NOT generate BibTeX from memory.
 - Be honest — include negative results and failed experiments
 - Do NOT hide weaknesses to game a positive score
@@ -437,21 +436,20 @@ When loop ends (positive assessment or max rounds):
 
 ## Prompt Template for Round 2+
 
-```
-mcp__codex__codex-reply:
-  threadId: [saved from round 1]
-  config: {"model_reasoning_effort": "xhigh"}
-  prompt: |
-    [Round N update]
+```bash
+codex exec "$(cat <<'PROMPT'
+[Round N update]
 
-    Since your last review, we have:
-    1. [Action 1]: [result]
-    2. [Action 2]: [result]
-    3. [Action 3]: [result]
+Since your last review, we have:
+1. [Action 1]: [result]
+2. [Action 2]: [result]
+3. [Action 3]: [result]
 
-    Updated results table:
-    [paste metrics]
+Updated results table:
+[paste metrics]
 
-    Please re-score and re-assess. Are the remaining concerns addressed?
-    Same format: Score, Verdict, Remaining Weaknesses, Minimum Fixes.
+Please re-score and re-assess. Are the remaining concerns addressed?
+Same format: Score, Verdict, Remaining Weaknesses, Minimum Fixes.
+PROMPT
+)" --skip-git-repo-check 2>&1
 ```

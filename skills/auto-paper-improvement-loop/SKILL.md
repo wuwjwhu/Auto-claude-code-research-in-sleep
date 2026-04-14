@@ -2,7 +2,7 @@
 name: auto-paper-improvement-loop
 description: "Autonomously improve a generated paper via GPT-5.4 xhigh review → implement fixes → recompile, for 2 rounds. Use when user says \"改论文\", \"improve paper\", \"论文润色循环\", \"auto improve\", or wants to iteratively polish a generated paper."
 argument-hint: [paper-directory]
-allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, Agent, mcp__codex__codex, mcp__codex__codex-reply
+allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, Agent
 ---
 
 # Auto Paper Improvement Loop: Review → Fix → Recompile
@@ -18,7 +18,7 @@ Unlike `/auto-review-loop` (which iterates on **research** — running experimen
 ## Constants
 
 - **MAX_ROUNDS = 2** — Two rounds of review→fix→recompile. Empirically, Round 1 catches structural issues (4→6/10), Round 2 catches remaining presentation issues (6→7/10). Diminishing returns beyond 2 rounds for writing-only improvements.
-- **REVIEWER_MODEL = `gpt-5.4`** — Model used via Codex MCP for paper review.
+- **REVIEWER_MODEL = `gpt-5.4`** — Model used via `codex exec` for paper review.
 - **REVIEW_LOG = `PAPER_IMPROVEMENT_LOG.md`** — Cumulative log of all rounds, stored in paper directory.
 - **HUMAN_CHECKPOINT = false** — When `true`, pause after each round's review and present score + weaknesses to the user. The user can approve fixes, provide custom modification instructions, skip specific fixes, or stop early. When `false` (default), runs fully autonomously.
 
@@ -71,41 +71,40 @@ done > /tmp/paper_full_text.txt
 
 Send the full paper text AND compiled PDF to GPT-5.4 xhigh:
 
+```bash
+codex exec "$(cat <<'PROMPT'
+You are reviewing a [VENUE] paper. Please provide a detailed, structured review.
+
+## Paper Files:
+- LaTeX source: [list all section .tex files]
+- Compiled PDF: paper/main.pdf
+- Figures: [list figure files]
+
+Read BOTH the LaTeX source (for content/logic) AND the compiled PDF (for visual presentation).
+
+## Review Instructions
+Please act as a senior ML reviewer ([VENUE] level). Provide:
+1. **Overall Score** (1-10, where 6 = weak accept, 7 = accept)
+2. **Summary** (2-3 sentences)
+3. **Strengths** (bullet list, ranked)
+4. **Weaknesses** (bullet list, ranked: CRITICAL > MAJOR > MINOR)
+5. **For each CRITICAL/MAJOR weakness**: A specific, actionable fix
+6. **Missing References** (if any)
+7. **Visual Review** (from the PDF):
+   - Figure quality: readable? labels legible? colors distinguishable in grayscale?
+   - Figure-caption alignment: does each caption match its figure?
+   - Layout: orphaned headers, awkward page breaks, figures far from references?
+   - Table formatting: aligned columns, consistent decimals, bold for best results?
+   - Visual consistency: same color scheme across all figures?
+8. **Verdict**: Ready for submission? Yes / Almost / No
+
+Focus on: theoretical rigor, claims vs evidence alignment, writing clarity,
+self-containedness, notation consistency, AND visual presentation quality.
+PROMPT
+)" --skip-git-repo-check 2>&1
 ```
-mcp__codex__codex:
-  model: gpt-5.4
-  config: {"model_reasoning_effort": "xhigh"}
-  prompt: |
-    You are reviewing a [VENUE] paper. Please provide a detailed, structured review.
 
-    ## Paper Files:
-    - LaTeX source: [list all section .tex files]
-    - Compiled PDF: paper/main.pdf
-    - Figures: [list figure files]
-
-    Read BOTH the LaTeX source (for content/logic) AND the compiled PDF (for visual presentation).
-
-    ## Review Instructions
-    Please act as a senior ML reviewer ([VENUE] level). Provide:
-    1. **Overall Score** (1-10, where 6 = weak accept, 7 = accept)
-    2. **Summary** (2-3 sentences)
-    3. **Strengths** (bullet list, ranked)
-    4. **Weaknesses** (bullet list, ranked: CRITICAL > MAJOR > MINOR)
-    5. **For each CRITICAL/MAJOR weakness**: A specific, actionable fix
-    6. **Missing References** (if any)
-    7. **Visual Review** (from the PDF):
-       - Figure quality: readable? labels legible? colors distinguishable in grayscale?
-       - Figure-caption alignment: does each caption match its figure?
-       - Layout: orphaned headers, awkward page breaks, figures far from references?
-       - Table formatting: aligned columns, consistent decimals, bold for best results?
-       - Visual consistency: same color scheme across all figures?
-    8. **Verdict**: Ready for submission? Yes / Almost / No
-
-    Focus on: theoretical rigor, claims vs evidence alignment, writing clarity,
-    self-containedness, notation consistency, AND visual presentation quality.
-```
-
-Save the threadId for Round 2.
+Save the full raw review output for Round 2.
 
 ### Step 2b: Human Checkpoint (if enabled)
 
@@ -163,23 +162,21 @@ Verify: 0 undefined references, 0 undefined citations.
 
 ### Step 5: Round 2 Review
 
-Use `mcp__codex__codex-reply` with the saved threadId:
+For follow-up rounds, run `codex exec` again and include the saved review context:
 
-```
-mcp__codex__codex-reply:
-  threadId: [saved from Round 1]
-  model: gpt-5.4
-  config: {"model_reasoning_effort": "xhigh"}
-  prompt: |
-    [Round 2 update]
+```bash
+codex exec "$(cat <<'PROMPT'
+[Round 2 update]
 
-    Since your last review, we have implemented:
-    1. [Fix 1]: [description]
-    2. [Fix 2]: [description]
-    ...
+Since your last review, we have implemented:
+1. [Fix 1]: [description]
+2. [Fix 2]: [description]
+...
 
-    Please re-score and re-assess. Same format:
-    Score, Summary, Strengths, Weaknesses, Actionable fixes, Verdict.
+Please re-score and re-assess. Same format:
+Score, Summary, Strengths, Weaknesses, Actionable fixes, Verdict.
+PROMPT
+)" --skip-git-repo-check 2>&1
 ```
 
 ### Step 5b: Human Checkpoint (if enabled)
@@ -316,7 +313,7 @@ paper/
 
 - **Preserve all PDF versions** — user needs to compare progression
 - **Save FULL raw review text** — do not summarize or truncate GPT-5.4 responses
-- **Use `mcp__codex__codex-reply`** for Round 2 to maintain conversation context
+- **Use `codex exec`** for Round 2 to maintain conversation context
 - **Always recompile after fixes** — verify 0 errors before proceeding
 - **Do not fabricate experimental results** — synthetic validation must describe methodology, not invent numbers
 - **Respect the paper's claims** — soften overclaims rather than adding unsupported new claims

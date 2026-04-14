@@ -2,7 +2,7 @@
 name: invention-structuring
 description: "Structure a raw invention idea into a formal invention disclosure. Use when user says \"构建发明\", \"structure invention\", \"发明构建\", \"invention disclosure\", or wants to formalize a rough idea into a patent-ready structure."
 argument-hint: [invention-description-or-brief-path]
-allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, Agent, mcp__codex__codex
+allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, Agent
 ---
 
 # Invention Structuring
@@ -110,25 +110,25 @@ Dependent Claim 5 → alternative implementation of feature A
 
 ### Step 6: Cross-Model Validation
 
-Call `REVIEWER_MODEL` via `mcp__codex__codex` with xhigh reasoning:
+Call `REVIEWER_MODEL` via `codex exec` with xhigh reasoning:
 
-```
-mcp__codex__codex:
-  config: {"model_reasoning_effort": "xhigh"}
-  prompt: |
-    You are a patent attorney reviewing an invention disclosure.
-    Evaluate the structuring choices:
+```bash
+codex exec "$(cat <<'PROMPT'
+You are a patent attorney reviewing an invention disclosure.
+Evaluate the structuring choices:
 
-    INVENTION: [Problem-Solution-Advantage summary]
-    DECOMPOSITION: [Core/Supporting/Optional features]
-    CLAIM PLAN: [intended claim categories and hierarchy]
+INVENTION: [Problem-Solution-Advantage summary]
+DECOMPOSITION: [Core/Supporting/Optional features]
+CLAIM PLAN: [intended claim categories and hierarchy]
 
-    Please assess:
-    1. Is the Problem-Solution-Advantage framework correctly applied?
-    2. Is the core inventive concept correctly identified? Are there features that should be core but are listed as supporting (or vice versa)?
-    3. Are the planned claim categories sufficient to protect the invention?
-    4. Is the drawing plan adequate for enablement?
-    5. Are there any claimable aspects being missed?
+Please assess:
+1. Is the Problem-Solution-Advantage framework correctly applied?
+2. Is the core inventive concept correctly identified? Are there features that should be core but are listed as supporting (or vice versa)?
+3. Are the planned claim categories sufficient to protect the invention?
+4. Is the drawing plan adequate for enablement?
+5. Are there any claimable aspects being missed?
+PROMPT
+)" --skip-git-repo-check 2>&1
 ```
 
 ### Step 7: Output
@@ -184,4 +184,4 @@ Write `patent/INVENTION_DISCLOSURE.md`:
 - The core inventive concept must be the minimum set of features for patentability.
 - Supporting features should be independently valuable -- each should provide a meaningful technical benefit even if other supporting features are removed.
 - Never invent embodiments that do not correspond to the actual invention or user-provided materials.
-- If `mcp__codex__codex` is not available, skip cross-model validation and note it in the output.
+- If `codex exec` is not available, skip cross-model validation and note it in the output.

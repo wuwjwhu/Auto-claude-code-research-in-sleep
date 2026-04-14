@@ -2,7 +2,7 @@
 name: idea-creator
 description: Generate and rank research ideas given a broad direction. Use when user says "找idea", "brainstorm ideas", "generate research ideas", "what can we work on", or wants to explore a research area for publishable directions.
 argument-hint: [research-direction]
-allowed-tools: Bash(*), Read, Write, Grep, Glob, WebSearch, WebFetch, Agent, mcp__codex__codex, mcp__codex__codex-reply
+allowed-tools: Bash(*), Read, Write, Grep, Glob, WebSearch, WebFetch, Agent
 ---
 
 # Research Idea Creator
@@ -19,8 +19,8 @@ Given a broad research direction from the user, systematically generate, validat
 - **PILOT_TIMEOUT_HOURS = 3** — Hard timeout: kill pilots exceeding 3 hours. Collect partial results if available.
 - **MAX_PILOT_IDEAS = 3** — Pilot at most 3 ideas in parallel. Additional ideas are validated on paper only.
 - **MAX_TOTAL_GPU_HOURS = 8** — Total GPU budget for all pilots combined.
-- **REVIEWER_MODEL = `gpt-5.4`** — Model used via Codex MCP for brainstorming and review. Must be an OpenAI model (e.g., `gpt-5.4`, `o3`, `gpt-4o`).
-- **REVIEWER_BACKEND = `codex`** — Default: Codex MCP (xhigh). Override with `— reviewer: oracle-pro` for GPT-5.4 Pro via Oracle MCP. See `shared-references/reviewer-routing.md`.
+- **REVIEWER_MODEL = `gpt-5.4`** — Model used via `codex exec` for brainstorming and review. Must be an OpenAI model (e.g., `gpt-5.4`, `o3`, `gpt-4o`).
+- **REVIEWER_BACKEND = `codex`** — Default: `codex exec` (xhigh). Override with `— reviewer: oracle-pro` for GPT-5.4 Pro via Oracle MCP. See `shared-references/reviewer-routing.md`.
 - **OUTPUT_DIR = `idea-stage/`** — All idea-stage outputs go here. Create the directory if it doesn't exist.
 
 > 💡 Override via argument, e.g., `/idea-creator "topic" — pilot budget: 4h per idea, 20h total`.
@@ -70,41 +70,40 @@ Map the research area to understand what exists and where the gaps are.
 
 ### Phase 2: Idea Generation (brainstorm with external LLM)
 
-Use the external LLM via Codex MCP for divergent thinking:
+Use the external LLM via `codex exec` for divergent thinking:
 
+```bash
+codex exec "$(cat <<'PROMPT'
+You are a senior ML researcher brainstorming research ideas.
+
+Research direction: [user's direction]
+
+Here is the current landscape:
+[paste landscape map from Phase 1]
+
+Key gaps identified:
+[paste gaps from Phase 1]
+
+Generate 8-12 concrete research ideas. For each idea:
+1. One-sentence summary
+2. Core hypothesis (what you expect to find and why)
+3. Minimum viable experiment (what's the cheapest way to test this?)
+4. Expected contribution type: empirical finding / new method / theoretical result / diagnostic
+5. Risk level: LOW (likely works) / MEDIUM (50-50) / HIGH (speculative)
+6. Estimated effort: days / weeks / months
+
+Prioritize ideas that are:
+- Testable with moderate compute (8x RTX 3090 or less)
+- Likely to produce a clear positive OR negative result (both are publishable)
+- Not "apply X to Y" unless the application reveals genuinely surprising insights
+- Differentiated from the 10-15 papers above
+
+Be creative but grounded. A great idea is one where the answer matters regardless of which way it goes.
+PROMPT
+)" --skip-git-repo-check 2>&1
 ```
-mcp__codex__codex:
-  model: REVIEWER_MODEL
-  config: {"model_reasoning_effort": "xhigh"}
-  prompt: |
-    You are a senior ML researcher brainstorming research ideas.
 
-    Research direction: [user's direction]
-
-    Here is the current landscape:
-    [paste landscape map from Phase 1]
-
-    Key gaps identified:
-    [paste gaps from Phase 1]
-
-    Generate 8-12 concrete research ideas. For each idea:
-    1. One-sentence summary
-    2. Core hypothesis (what you expect to find and why)
-    3. Minimum viable experiment (what's the cheapest way to test this?)
-    4. Expected contribution type: empirical finding / new method / theoretical result / diagnostic
-    5. Risk level: LOW (likely works) / MEDIUM (50-50) / HIGH (speculative)
-    6. Estimated effort: days / weeks / months
-
-    Prioritize ideas that are:
-    - Testable with moderate compute (8x RTX 3090 or less)
-    - Likely to produce a clear positive OR negative result (both are publishable)
-    - Not "apply X to Y" unless the application reveals genuinely surprising insights
-    - Differentiated from the 10-15 papers above
-
-    Be creative but grounded. A great idea is one where the answer matters regardless of which way it goes.
-```
-
-Save the threadId for follow-up.
+Save the full raw review output for follow-up rounds.
 
 ### Phase 3: First-Pass Filtering
 
@@ -130,7 +129,7 @@ For each surviving idea, run a deeper evaluation:
 
 1. **Novelty check**: Use the `/novelty-check` workflow (multi-source search + GPT-5.4 cross-verification) for each idea
 
-2. **Critical review**: Use GPT-5.4 via `mcp__codex__codex-reply` (same thread):
+2. **Critical review**: Use GPT-5.4 via `codex exec` (same thread):
    ```
    Here are our top ideas after filtering:
    [paste surviving ideas with novelty check results]
