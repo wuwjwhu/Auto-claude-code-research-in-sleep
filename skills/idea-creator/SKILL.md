@@ -47,21 +47,27 @@ else if research-wiki/ exists but query_pack.md is stale or missing:
 
 Map the research area to understand what exists and where the gaps are.
 
-1. **Scan local paper library first**: Check `papers/` and `literature/` in the project directory for existing PDFs. Read first 3 pages of relevant papers to build a baseline understanding before searching online. This avoids re-discovering what the user already knows.
+If this skill is being called from `/idea-discovery`, treat the Phase 1 output from `/research-lit` as the primary landscape input.
 
-2. **Search recent literature** using WebSearch:
+1. **Use normalized upstream synthesis first**: If `/research-lit` already incorporated prepared deep-research markdown reports, use its normalized synthesis as the main landscape map instead of rereading raw `deep-research/*.md`.
+
+2. **Scan local paper library when needed**: Check `papers/` and `literature/` in the project directory for existing PDFs only to fill gaps or validate missing details. Read first 3 pages of relevant papers to build a baseline understanding before searching online.
+
+3. **Search recent literature** using WebSearch when the upstream synthesis is missing, stale, or incomplete:
    - Top venues in the last 2 years (NeurIPS, ICML, ICLR, ACL, EMNLP, etc.)
    - Recent arXiv preprints (last 6 months)
    - Use 5+ different query formulations
    - Read abstracts and introductions of the top 10-15 papers
 
-2. **Build a landscape map**:
+4. **Build a landscape map**:
    - Group papers by sub-direction / approach
    - Identify what has been tried and what hasn't
+   - Carry forward explicit theme clusters and benchmark anchors from prepared-report-derived synthesis when still supported
    - Note recurring limitations mentioned in "Future Work" sections
    - Flag any open problems explicitly stated by multiple papers
 
-3. **Identify structural gaps**:
+5. **Identify structural gaps**:
+   - Prefer explicit gap statements and unresolved contradictions surfaced by `/research-lit`
    - Methods that work in domain A but haven't been tried in domain B
    - Contradictory findings between papers (opportunity for resolution)
    - Assumptions that everyone makes but nobody has tested
@@ -80,6 +86,8 @@ Research direction: [user's direction]
 
 Here is the current landscape:
 [paste landscape map from Phase 1]
+
+If the landscape came from `/research-lit` with prepared deep-research markdown, trust its normalized theme clusters, benchmark anchors, and explicit gap statements more than raw narrative prose.
 
 Key gaps identified:
 [paste gaps from Phase 1]
@@ -120,6 +128,8 @@ For each generated idea, quickly evaluate:
 3. **Impact estimation**: Would a reviewer care about the result?
    - "So what?" test: if the experiment succeeds, does it change how people think?
    - Is the finding actionable or just interesting?
+
+4. **Evidence hygiene**: If a claim came only from prepared report prose and not from current literature verification, treat it as a brainstorming seed, not as proof of novelty or importance.
 
 Eliminate ideas that fail any of these. Typically 8-12 ideas reduce to 4-6.
 

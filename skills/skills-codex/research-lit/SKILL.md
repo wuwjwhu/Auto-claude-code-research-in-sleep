@@ -13,6 +13,8 @@ Research topic: $ARGUMENTS
   1. `papers/` in the current project directory
   2. `literature/` in the current project directory
   3. Custom path specified by user in `AGENTS.md` under `## Paper Library`
+- **PREPARED_REPORT_DIR = `deep-research/`** — Preferred directory for prewritten deep research markdown reports generated outside this workflow.
+- **MAX_PREPARED_REPORTS = 2** — In `— report: auto` mode, read at most the top 1-2 most relevant reports to avoid context bloat.
 - **MAX_LOCAL_PAPERS = 20** — Maximum number of local PDFs to scan (read first 3 pages each). If more are found, prioritize by filename relevance to the topic.
 - **ARXIV_DOWNLOAD = false** — When `true`, download top 3-5 most relevant arXiv PDFs to PAPER_LIBRARY after search. When `false` (default), only fetch metadata (title, abstract, authors) via arXiv API — no files are downloaded.
 - **ARXIV_MAX_DOWNLOAD = 5** — Maximum number of PDFs to download when `ARXIV_DOWNLOAD = true`.
@@ -24,6 +26,9 @@ Research topic: $ARGUMENTS
 > - `/research-lit "topic" — sources: web` — only search the web (skip all local)
 > - `/research-lit "topic" — sources: deepxiv` — only search via DeepXiv progressive retrieval
 > - `/research-lit "topic" — sources: all, deepxiv` — use default sources plus DeepXiv
+> - `/research-lit "topic" — report: auto` — auto-detect the most relevant prepared markdown reports under `deep-research/` (default)
+> - `/research-lit "topic" — report: none` — skip prepared markdown reports entirely
+> - `/research-lit "topic" — report: deep-research/deep-research-report.md` — pin one prepared report explicitly
 > - `/research-lit "topic" — arxiv download: true` — download top relevant arXiv PDFs
 > - `/research-lit "topic" — arxiv download: true, max download: 10` — download up to 10 PDFs
 
@@ -57,10 +62,11 @@ Examples:
 |----------|--------|----|---------------|-----------------|
 | 1 | **Zotero** (via MCP) | `zotero` | Try calling any `mcp__zotero__*` tool — if unavailable, skip | Collections, tags, annotations, PDF highlights, BibTeX, semantic search |
 | 2 | **Obsidian** (via MCP) | `obsidian` | Try calling any `mcp__obsidian-vault__*` tool — if unavailable, skip | Research notes, paper summaries, tagged references, wikilinks |
-| 3 | **Local PDFs** | `local` | `Glob: papers/**/*.pdf, literature/**/*.pdf` | Raw PDF content (first 3 pages) |
-| 4 | **Web search** | `web` | Always available (WebSearch) | arXiv, Semantic Scholar, Google Scholar |
-| 5 | **DeepXiv CLI** | `deepxiv` | `tools/deepxiv_fetch.py` and installed `deepxiv` CLI | Progressive paper retrieval: search, brief, head, section, trending, web search. **Only runs when explicitly requested** |
-| 6 | **Exa Search** | `exa` | `tools/exa_search.py` and installed `exa-py` SDK | AI-powered broad web search with content extraction (highlights, text, summaries). Covers blogs, docs, news, companies, and research papers beyond arXiv/S2. **Only runs when explicitly requested** |
+| 3 | **Prepared markdown reports** | `report` | `Glob: deep-research/*.md` or explicit `— report: <path>` | Precomputed deep research synthesis: framing, theme clusters, gap statements, benchmarks, open questions |
+| 4 | **Local PDFs** | `local` | `Glob: papers/**/*.pdf, literature/**/*.pdf` | Raw PDF content (first 3 pages) |
+| 5 | **Web search** | `web` | Always available (WebSearch) | arXiv, Semantic Scholar, Google Scholar |
+| 6 | **DeepXiv CLI** | `deepxiv` | `tools/deepxiv_fetch.py` and installed `deepxiv` CLI | Progressive paper retrieval: search, brief, head, section, trending, web search. **Only runs when explicitly requested** |
+| 7 | **Exa Search** | `exa` | `tools/exa_search.py` and installed `exa-py` SDK | AI-powered broad web search with content extraction (highlights, text, summaries). Covers blogs, docs, news, companies, and research papers beyond arXiv/S2. **Only runs when explicitly requested** |
 
 > **Graceful degradation**: If no MCP servers are configured, the skill works exactly as before (local PDFs + web search). Zotero and Obsidian are pure additions.
 
@@ -102,7 +108,36 @@ Try calling an Obsidian MCP tool (e.g., search). If it succeeds:
 
 > 📝 Obsidian notes represent the user's **processed understanding** — more valuable than raw paper content for understanding their perspective.
 
-### Step 0c: Scan Local Paper Library
+### Step 0c: Read Prepared Deep Research Reports (if available)
+
+Before searching online, check whether the user already has synthesized markdown reports in `PREPARED_REPORT_DIR`.
+
+Parse `$ARGUMENTS` for a `— report:` directive:
+- `— report: auto` (default) → auto-detect the most relevant reports in `deep-research/*.md`
+- `— report: none` → skip this step entirely
+- `— report: <path>` → read that specific markdown report first
+
+In `— report: auto` mode, prefer reports in this order:
+1. `deep-research/deep-research-report.md`
+2. filenames matching the topic
+3. filenames containing `Literature Review`, `Survey`, `Review`, or `Gap`
+4. other recent markdown reports
+
+Read at most `MAX_PREPARED_REPORTS` reports. Treat them as **precomputed local synthesis**, not as final truth.
+
+From each selected report, extract only the reusable structure:
+- problem framing and terminology
+- theme clusters / approach buckets
+- named methods and papers
+- explicit gap statements
+- benchmarks, datasets, and evaluation dimensions
+- unresolved contradictions or open questions
+
+Summarize this into a compact "prepared report synthesis" section that feeds the rest of the workflow.
+
+> 🧭 Use prepared reports to start from the strongest existing synthesis, but still verify freshness with current search before making novelty or scope claims.
+
+### Step 0d: Scan Local Paper Library
 
 Before searching online, check if the user already has relevant papers locally:
 
@@ -111,7 +146,7 @@ Before searching online, check if the user already has relevant papers locally:
    Glob: papers/**/*.pdf, literature/**/*.pdf
    ```
 
-2. **De-duplicate against Zotero**: If Step 0a found papers, skip any local PDFs already covered by Zotero results (match by filename or title).
+2. **De-duplicate against Zotero and prepared reports**: If Step 0a or Step 0c already surfaced a paper, skip duplicated local PDFs when possible (match by filename or title).
 
 3. **Filter by relevance**: Match filenames and first-page content against the research topic. Skip clearly unrelated papers.
 
@@ -128,7 +163,8 @@ Before searching online, check if the user already has relevant papers locally:
 - Use WebSearch to find recent papers on the topic
 - Check arXiv, Semantic Scholar, Google Scholar
 - Focus on papers from last 2 years unless studying foundational work
-- **De-duplicate**: Skip papers already found in Zotero, Obsidian, or local library
+- **De-duplicate**: Skip papers already found in Zotero, Obsidian, prepared reports, or local library
+- **Verify freshness**: treat prepared reports as a strong starting point, then explicitly confirm whether newer competing work, changed terminology, or better benchmark evidence has appeared since those reports were written
 
 **arXiv API search** (always runs, no download by default):
 
@@ -207,9 +243,11 @@ For each relevant paper (from all sources), extract:
 - **Source**: Where we found it (Zotero/Obsidian/local/web) — helps user know what they already have vs what's new
 
 ### Step 3: Synthesize
+- Start with the prepared-report synthesis if Step 0c was used, then update it with current literature rather than rewriting from scratch
 - Group papers by approach/theme
 - Identify consensus vs disagreements in the field
 - Find gaps that our work could fill
+- Surface explicit gap statements, benchmark anchors, and open questions from the prepared reports when they still hold after verification
 - If Obsidian notes exist, incorporate the user's own insights into the synthesis
 
 ### Step 4: Output
@@ -221,6 +259,12 @@ Present as a structured literature table:
 ```
 
 Plus a narrative summary of the landscape (3-5 paragraphs).
+
+If prepared reports were used, add a short subsection before the final synthesis:
+- **Prepared reports used**
+- **Theme clusters carried forward**
+- **Gap statements worth keeping**
+- **Claims that required freshness checks**
 
 If Zotero BibTeX was exported, include a `references.bib` snippet for direct use in paper writing.
 

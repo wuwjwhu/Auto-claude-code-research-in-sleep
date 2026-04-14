@@ -32,8 +32,9 @@ Each phase builds on the previous one's output. The final deliverables are a val
 - **ARXIV_DOWNLOAD = false** — When `true`, `/research-lit` downloads the top relevant arXiv PDFs during Phase 1. When `false` (default), only fetches metadata. Passed through to `/research-lit`.
 - **COMPACT = false** — When `true`, generate compact summary files for short-context models and session recovery. Writes `idea-stage/IDEA_CANDIDATES.md` (top 3-5 ideas only) at the end of this workflow. Downstream skills read this instead of the full `idea-stage/IDEA_REPORT.md`.
 - **REF_PAPER = false** — Reference paper to base ideas on. Accepts: local PDF path, arXiv URL, or any paper URL. When set, the paper is summarized first (`idea-stage/REF_PAPER_SUMMARY.md`), then idea generation uses it as context. Combine with `base repo` for "improve this paper with this codebase" workflows.
+- **REPORT = `auto`** — Prepared deep research markdown input for Phase 1. Accepts: `auto`, `none`, or a specific markdown path such as `deep-research/deep-research-report.md`.
 
-> 💡 These are defaults. Override by telling the skill, e.g., `/idea-discovery "topic" — ref paper: https://arxiv.org/abs/2406.04329` or `/idea-discovery "topic" — compact: true`.
+> 💡 These are defaults. Override by telling the skill, e.g., `/idea-discovery "topic" — ref paper: https://arxiv.org/abs/2406.04329`, `/idea-discovery "topic" — report: deep-research/deep-research-report.md`, or `/idea-discovery "topic" — compact: true`.
 
 ## Pipeline
 
@@ -54,6 +55,23 @@ Before starting any other phase, check for a detailed research brief in the proj
 If no brief exists, proceed normally with `$ARGUMENTS` as the research direction.
 
 > 💡 Create a brief from the template: `cp templates/RESEARCH_BRIEF_TEMPLATE.md RESEARCH_BRIEF.md`
+
+### Phase 0.25: Prepared Deep Research Reports (when REPORT is not `none`)
+
+Before Phase 1, treat prepared markdown reports under `deep-research/` as additional landscape context.
+
+Precedence is:
+1. `RESEARCH_BRIEF.md` defines the actual problem, constraints, non-goals, and prior attempts
+2. `REF_PAPER` defines the paper-specific seed when present
+3. prepared reports provide prior synthesized landscape context
+4. `/research-lit` still performs fresh search afterward to verify freshness and catch missed work
+
+Behavior:
+- If `— report: <path>` is provided, forward that exact report choice into `/research-lit`
+- If `— report: auto` is used (default), let `/research-lit` auto-detect the most relevant markdown reports in `deep-research/`
+- If `— report: none` is used, skip prepared reports entirely and use the older workflow
+
+Do not treat prepared reports as a replacement for literature review. Their job is to improve the starting point for `/research-lit`, which then produces the normalized landscape summary used by later phases.
 
 ### Phase 0.5: Reference Paper Summary (when REF_PAPER is set)
 
@@ -117,11 +135,14 @@ Invoke `/research-lit` to map the research landscape:
 /research-lit "$ARGUMENTS"
 ```
 
+If `REPORT` was set explicitly, forward it into `/research-lit`. Otherwise rely on `/research-lit` auto-detection in `deep-research/`.
+
 **What this does:**
+- Read prepared deep-research markdown first when available
 - Search arXiv, Google Scholar, Semantic Scholar for recent papers
 - Build a landscape map: sub-directions, approaches, open problems
 - Identify structural gaps and recurring limitations
-- Output a literature summary (saved to working notes)
+- Output a normalized literature summary (saved to working notes) for later phases
 
 **🚦 Checkpoint:** Present the landscape summary to the user. Ask:
 
@@ -146,6 +167,7 @@ Invoke `/idea-creator` with the landscape context (and `idea-stage/REF_PAPER_SUM
 
 **What this does:**
 - If `idea-stage/REF_PAPER_SUMMARY.md` exists, include it as context — ideas should build on, improve, or extend the reference paper
+- If Phase 1 used prepared reports, rely on the normalized literature synthesis rather than rereading raw `deep-research/*.md`
 - Brainstorm 8-12 concrete ideas via GPT-5.4 xhigh
 - Filter by feasibility, compute cost, quick novelty search
 - Deep validate top ideas (full novelty check + devil's advocate)

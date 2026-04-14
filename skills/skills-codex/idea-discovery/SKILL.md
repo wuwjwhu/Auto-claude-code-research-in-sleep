@@ -30,10 +30,44 @@ Each phase builds on the previous one's output. The final deliverables are a val
 - **COMPACT = false** — When `true`, generate compact summary files for short-context sessions and downstream skills. Writes `idea-stage/IDEA_CANDIDATES.md`.
 - **OUTPUT_DIR = `idea-stage/`** — All idea-stage outputs go here. Create the directory if it doesn't exist.
 - **REF_PAPER = false** — Reference paper to base ideas on. Accepts a local PDF path, arXiv URL, or paper URL. When set, summarize it first and use it as idea-generation context.
+- **REPORT = `auto`** — Prepared deep research markdown input for Phase 1. Accepts: `auto`, `none`, or a specific markdown path such as `deep-research/deep-research-report.md`.
 
-> 💡 These are defaults. Override by telling the skill, e.g., `/idea-discovery "topic" — ref paper: https://arxiv.org/abs/2406.04329` or `/idea-discovery "topic" — compact: true`.
+> 💡 These are defaults. Override by telling the skill, e.g., `/idea-discovery "topic" — ref paper: https://arxiv.org/abs/2406.04329`, `/idea-discovery "topic" — report: deep-research/deep-research-report.md`, or `/idea-discovery "topic" — compact: true`.
 
 ## Pipeline
+
+### Phase 0: Load Research Brief (if available)
+
+Before starting any other phase, check for a detailed research brief in the project:
+
+1. Look for `RESEARCH_BRIEF.md` in the project root (or path passed as `$ARGUMENTS`)
+2. If found, read it and extract:
+   - Problem statement and context
+   - Constraints (compute, data, timeline, venue)
+   - What the user already tried / what didn't work
+   - Domain knowledge and non-goals
+   - Existing results (if any)
+3. Use this as the primary context for all subsequent phases — it replaces the one-line prompt
+4. If both `RESEARCH_BRIEF.md` and a one-line `$ARGUMENTS` exist, merge them (brief takes priority for details, argument sets the direction)
+
+If no brief exists, proceed normally with `$ARGUMENTS` as the research direction.
+
+### Phase 0.25: Prepared Deep Research Reports (when REPORT is not `none`)
+
+Before Phase 1, treat prepared markdown reports under `deep-research/` as additional landscape context.
+
+Precedence is:
+1. `RESEARCH_BRIEF.md` defines the actual problem, constraints, non-goals, and prior attempts
+2. `REF_PAPER` defines the paper-specific seed when present
+3. prepared reports provide prior synthesized landscape context
+4. `/research-lit` still performs fresh search afterward to verify freshness and catch missed work
+
+Behavior:
+- If `— report: <path>` is provided, forward that exact report choice into `/research-lit`
+- If `— report: auto` is used (default), let `/research-lit` auto-detect the most relevant markdown reports in `deep-research/`
+- If `— report: none` is used, skip prepared reports entirely and use the older workflow
+
+Do not treat prepared reports as a replacement for literature review. Their job is to improve the starting point for `/research-lit`, which then produces the normalized landscape summary used by later phases.
 
 ### Phase 0.5: Reference Paper Summary (when REF_PAPER is set)
 
@@ -56,11 +90,14 @@ Invoke `/research-lit` to map the research landscape:
 /research-lit "$ARGUMENTS"
 ```
 
+If `REPORT` was set explicitly, forward it into `/research-lit`. Otherwise rely on `/research-lit` auto-detection in `deep-research/`.
+
 **What this does:**
+- Read prepared deep-research markdown first when available
 - Search arXiv, Google Scholar, Semantic Scholar for recent papers
 - Build a landscape map: sub-directions, approaches, open problems
 - Identify structural gaps and recurring limitations
-- Output a literature summary (saved to working notes)
+- Output a normalized literature summary (saved to working notes) for later phases
 
 **🚦 Checkpoint:** Present the landscape summary to the user. Ask:
 
@@ -85,6 +122,7 @@ Invoke `/idea-creator` with the landscape context and `idea-stage/REF_PAPER_SUMM
 
 **What this does:**
 - If `idea-stage/REF_PAPER_SUMMARY.md` exists, include it as context so ideas explicitly build on, improve, or extend the reference paper
+- If Phase 1 used prepared reports, rely on the normalized literature synthesis rather than rereading raw `deep-research/*.md`
 - Brainstorm 8-12 concrete ideas via GPT-5.4 xhigh
 - Filter by feasibility, compute cost, quick novelty search
 - Deep validate top ideas (full novelty check + devil's advocate)
