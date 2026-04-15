@@ -11,6 +11,14 @@ Autonomously iterate: review → implement fixes → re-review, until the extern
 
 ## Context: $ARGUMENTS
 
+## Execution Contract
+
+- Treat this skill as an **executable workflow**, not as background documentation.
+- **Begin immediately. Do not ask a generic kickoff question** such as "What would you like me to work on?"
+- The user already requested the loop by invoking this skill. Your first action is **Initialization Step 1** below.
+- When you need a user decision, only pause at the explicit **Human Checkpoint** step or when a genuinely destructive/shared action requires confirmation.
+- The `codex exec` blocks in this file are **commands to execute**, not illustrative examples.
+
 ## Constants
 
 - MAX_ROUNDS = 4
@@ -60,6 +68,8 @@ Long-running loops may hit the context window limit, triggering automatic compac
 
 ### Initialization
 
+Execute this section immediately after the skill is invoked.
+
 1. **Check for `review-stage/REVIEW_STATE.json`** *(fall back to `./REVIEW_STATE.json` if not found — legacy path)*:
    - If neither path exists: **fresh start** (normal case, identical to behavior before this feature existed)
    - If it exists AND `status` is `"completed"`: **fresh start** (previous loop finished normally)
@@ -84,7 +94,7 @@ Long-running loops may hit the context window limit, triggering automatic compac
 
 ##### Medium (default) — `codex exec` Review
 
-Send comprehensive context to the external reviewer:
+Run the following command once you have assembled the context. Do not stop to ask for permission unless the user explicitly enabled Human Checkpoint:
 
 ```bash
 codex exec "$(cat <<'PROMPT'
@@ -109,7 +119,7 @@ If this is round 2+, re-run `codex exec` with the prior review, your rebuttal, a
 
 ##### Hard — `codex exec` Review + Reviewer Memory
 
-Same as medium, but **prepend Reviewer Memory** to the prompt:
+Same as medium, but **prepend Reviewer Memory** to the prompt and execute it directly:
 
 ```bash
 codex exec "$(cat <<'PROMPT'
@@ -238,7 +248,7 @@ Rules for Claude's rebuttal:
 
 **Step 2 — GPT Rules on Rebuttal:**
 
-Send Claude's rebuttal back to GPT for a ruling:
+Send Claude's rebuttal back to GPT for a ruling immediately after drafting it:
 
 *Hard mode (MCP):*
 ```bash
