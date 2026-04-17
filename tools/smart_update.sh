@@ -4,17 +4,131 @@
 # customizations, and recommends safe update strategy per skill.
 #
 # Usage:
-#   bash tools/smart_update.sh [--apply]
+#   Global (default):
+#     bash tools/smart_update.sh [--apply]
+#   Project-level (Claude Code):
+#     bash tools/smart_update.sh --project <path> [--apply]
+#   Project-level (Codex CLI):
+#     bash tools/smart_update.sh --project <path> --target-subdir .agents/skills/aris [--apply]
+#   Custom paths:
+#     bash tools/smart_update.sh --upstream <path> --local <path> [--apply]
+#
 #   --apply: actually perform the updates (default: dry-run analysis only)
+#   --project <path>: project root — upstream from repo, local from <path>/<target-subdir>
+#   --target-subdir <relative>: project-mode skill subdirectory (default: .claude/skills)
+#                               common values: .claude/skills, .claude/skills/aris,
+#                                              .agents/skills, .agents/skills/aris
+#                               must be a relative path
+#   --upstream <path>: explicit upstream skills directory
+#   --local <path>: explicit local skills directory
 
 set -euo pipefail
 
-UPSTREAM_DIR="$(cd "$(dirname "$0")/.." && pwd)/skills"
-LOCAL_DIR="${HOME}/.claude/skills"
+# ─── Parse arguments ───────────────────────────────────────────────────────────
 APPLY=false
+MODE="global"
+PROJECT_PATH=""
+TARGET_SUBDIR=".claude/skills"
+CUSTOM_UPSTREAM=""
+CUSTOM_LOCAL=""
 
-if [[ "${1:-}" == "--apply" ]]; then
-    APPLY=true
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --apply)
+            APPLY=true
+            shift
+            ;;
+        --project)
+            MODE="project"
+            PROJECT_PATH="${2:?--project requires a path argument}"
+            shift 2
+            ;;
+        --target-subdir)
+            TARGET_SUBDIR="${2:?--target-subdir requires a relative path argument}"
+            if [[ "$TARGET_SUBDIR" == /* ]]; then
+                echo "Error: --target-subdir must be a relative path (got: $TARGET_SUBDIR)" >&2
+                echo "Hint: use --local for absolute paths" >&2
+                exit 1
+            fi
+            shift 2
+            ;;
+        --upstream)
+            MODE="explicit"
+            CUSTOM_UPSTREAM="${2:?--upstream requires a path argument}"
+            shift 2
+            ;;
+        --local)
+            MODE="explicit"
+            CUSTOM_LOCAL="${2:?--local requires a path argument}"
+            shift 2
+            ;;
+        *)
+            echo "Unknown argument: $1"
+            echo "Usage: bash tools/smart_update.sh [--apply] [--project <path> [--target-subdir <rel>]] [--upstream <path> --local <path>]"
+            exit 1
+            ;;
+    esac
+done
+
+# ─── Resolve paths ─────────────────────────────────────────────────────────────
+REPO_SKILLS_DIR="$(cd "$(dirname "$0")/.." && pwd)/skills"
+
+case "$MODE" in
+    project)
+        # Resolve project path
+        if [[ "$PROJECT_PATH" == /* ]]; then
+            PROJECT_ROOT="$PROJECT_PATH"
+        else
+            PROJECT_ROOT="$(cd "$PROJECT_PATH" && pwd)"
+        fi
+        # Upstream always from repo
+        UPSTREAM_DIR="$REPO_SKILLS_DIR"
+        LOCAL_DIR="$PROJECT_ROOT/$TARGET_SUBDIR"
+        SCOPE="Project: $PROJECT_ROOT (subdir: $TARGET_SUBDIR)"
+
+        # Platform marker auto-detect: warn on mismatch (never silently switch)
+        HAS_CLAUDE_MARKERS=false
+        HAS_CODEX_MARKERS=false
+        [[ -e "$PROJECT_ROOT/CLAUDE.md" || -e "$PROJECT_ROOT/.claude/skills" || -e "$PROJECT_ROOT/.claude/settings.json" ]] && HAS_CLAUDE_MARKERS=true
+        [[ -e "$PROJECT_ROOT/AGENTS.md" || -e "$PROJECT_ROOT/.agents/skills" || -e "$PROJECT_ROOT/.codex/config.toml" ]] && HAS_CODEX_MARKERS=true
+        if $HAS_CLAUDE_MARKERS && ! $HAS_CODEX_MARKERS && [[ "$TARGET_SUBDIR" == .agents/* ]]; then
+            echo -e "\033[1;33m⚠️  Warning: project has Claude markers but --target-subdir points to Codex path ($TARGET_SUBDIR)\033[0m" >&2
+        fi
+        if $HAS_CODEX_MARKERS && ! $HAS_CLAUDE_MARKERS && [[ "$TARGET_SUBDIR" == .claude/* ]]; then
+            echo -e "\033[1;33m⚠️  Warning: project has Codex markers but --target-subdir points to Claude path ($TARGET_SUBDIR)\033[0m" >&2
+        fi
+        ;;
+    explicit)
+        if [[ -z "$CUSTOM_UPSTREAM" ]] || [[ -z "$CUSTOM_LOCAL" ]]; then
+            echo "Error: --upstream and --local must both be specified"
+            exit 1
+        fi
+        UPSTREAM_DIR="$CUSTOM_UPSTREAM"
+        LOCAL_DIR="$CUSTOM_LOCAL"
+        SCOPE="Custom"
+        ;;
+    *)
+        # Global default
+        UPSTREAM_DIR="$REPO_SKILLS_DIR"
+        LOCAL_DIR="${HOME}/.claude/skills"
+        SCOPE="Global"
+        ;;
+esac
+
+# ─── Refuse to operate on symlinked installs (those use git pull, not smart_update) ──
+if [[ -L "$LOCAL_DIR" ]]; then
+    LINK_TARGET="$(readlink "$LOCAL_DIR")"
+    echo "" >&2
+    echo -e "\033[0;31m✗ Local skill directory is a symlink: $LOCAL_DIR\033[0m" >&2
+    echo "  → $LINK_TARGET" >&2
+    echo "" >&2
+    echo "smart_update is for COPIED installs. Symlinked installs are updated by:" >&2
+    echo "  cd <aris-repo> && git pull" >&2
+    echo "" >&2
+    echo "If you need per-project customization, switch to a copied install:" >&2
+    echo "  rm $LOCAL_DIR" >&2
+    echo "  bash tools/smart_update.sh --project <project> --target-subdir $TARGET_SUBDIR --apply" >&2
+    exit 2
 fi
 
 # Colors
@@ -50,9 +164,15 @@ PERSONAL_PATTERNS=(
 )
 
 echo -e "${BLUE}━━━ ARIS Smart Skill Update ━━━${NC}"
+echo -e "Scope:    ${SCOPE}"
 echo -e "Upstream: ${UPSTREAM_DIR}"
 echo -e "Local:    ${LOCAL_DIR}"
 echo ""
+
+if [[ ! -d "$UPSTREAM_DIR" ]]; then
+    echo -e "${RED}Upstream skills directory not found: ${UPSTREAM_DIR}${NC}"
+    exit 1
+fi
 
 if [[ ! -d "$LOCAL_DIR" ]]; then
     echo -e "${RED}Local skills directory not found: ${LOCAL_DIR}${NC}"
@@ -73,11 +193,16 @@ declare -a SAFE_SKILLS=()
 declare -a MERGE_SKILLS=()
 declare -a LOCAL_SKILLS=()
 
+# Track upstream skill names for local-only detection
+declare -a UPSTREAM_NAMES=()
+
 # Check each upstream skill
 for skill_dir in "$UPSTREAM_DIR"/*/; do
     skill_name=$(basename "$skill_dir")
     [[ "$skill_name" == "skills-codex" ]] && continue  # skip codex mirror
     [[ "$skill_name" == "shared-references" ]] && continue  # handled separately
+
+    UPSTREAM_NAMES+=("$skill_name")
 
     local_skill="$LOCAL_DIR/$skill_name"
     upstream_file="$skill_dir/SKILL.md"
@@ -137,8 +262,15 @@ done
 # Check for local-only skills (not in upstream)
 for skill_dir in "$LOCAL_DIR"/*/; do
     skill_name=$(basename "$skill_dir")
-    upstream_skill="$UPSTREAM_DIR/$skill_name"
-    if [[ ! -d "$upstream_skill" ]] && [[ "$skill_name" != "shared-references" ]]; then
+    [[ "$skill_name" == "shared-references" ]] && continue
+    found=false
+    for uname in "${UPSTREAM_NAMES[@]:-}"; do
+        if [[ "$uname" == "$skill_name" ]]; then
+            found=true
+            break
+        fi
+    done
+    if ! $found; then
         LOCAL_ONLY=$((LOCAL_ONLY + 1))
         LOCAL_SKILLS+=("$skill_name")
     fi
@@ -220,9 +352,24 @@ if $APPLY; then
     if [[ $NEEDS_MERGE -gt 0 ]]; then
         echo -e "${YELLOW}⚠️  $NEEDS_MERGE skills have personal customizations and were NOT updated.${NC}"
         echo -e "${YELLOW}   Review manually: ${MERGE_SKILLS[*]}${NC}"
-        echo -e "${YELLOW}   Tip: diff ~/.claude/skills/<name>/SKILL.md skills/<name>/SKILL.md${NC}"
+        echo -e "${YELLOW}   Tip: diff the local and upstream SKILL.md files to merge changes${NC}"
     fi
 else
+    case "$MODE" in
+        project)
+            if [[ "$TARGET_SUBDIR" == ".claude/skills" ]]; then
+                CMD_HINT="bash tools/smart_update.sh --project \"$PROJECT_ROOT\" --apply"
+            else
+                CMD_HINT="bash tools/smart_update.sh --project \"$PROJECT_ROOT\" --target-subdir \"$TARGET_SUBDIR\" --apply"
+            fi
+            ;;
+        explicit)
+            CMD_HINT="bash tools/smart_update.sh --upstream \"$UPSTREAM_DIR\" --local \"$LOCAL_DIR\" --apply"
+            ;;
+        *)
+            CMD_HINT="bash tools/smart_update.sh --apply"
+            ;;
+    esac
     echo -e "Dry run complete. Run with ${GREEN}--apply${NC} to perform updates:"
-    echo -e "  ${GREEN}bash tools/smart_update.sh --apply${NC}"
+    echo -e "  ${GREEN}${CMD_HINT}${NC}"
 fi

@@ -90,6 +90,12 @@ ARIS 读论文 → 找弱点 → 克隆代码 → 针对*那些*弱点用*那套
 
 ## 📢 最近更新
 
+- **2026-04-17** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🔗 **[项目级 symlink 安装](tools/install_aris.sh)**（解决 [#118](https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep/issues/118)）— 新推荐默认安装方式。`bash tools/install_aris.sh` 自动检测平台（Claude Code / Codex CLI），创建 `.claude/skills/aris` 或 `.agents/skills/aris` symlink 指向 ARIS 仓库，在 `CLAUDE.md` / `AGENTS.md` 添加 `<!-- ARIS:BEGIN -->` 管理块告知 agent 仅用项目本地 skill，并在 `.aris/skill-source.txt` 记录安装元数据。**解决 skill 命名冲突问题**——当 ARIS 与 Superpowers / OpenHands 等社区 skill 包共用全局目录时，agent 会错误调用其他包的 skill 打断 ARIS 工作流。Windows 用户用 `install_aris.ps1`（基于 junction）。同时 `smart_update.sh` 新增 `--target-subdir` 参数支持 Codex `.agents/skills/aris` 项目级 copy 安装；symlink 安装会被拒绝并提示用 `git pull` 更新。全局安装继续支持给 power user
+- **2026-04-16** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🎨 **[`/figure-spec`](skills/figure-spec/SKILL.md)** — 确定性 JSON→SVG 渲染器正式包装为一级 skill。论文架构图/工作流/流水线/审计级联图的首选默认方案。形状感知边裁剪（矩形/圆/椭圆/菱形）、自环、弯曲边、多行标签含 CJK 宽度估算。矢量输出可编辑、可复现（相同 spec → 相同 SVG）、无外部 API。**Workflow 3 Phase 2b 恢复**：`illustration: figurespec`（新默认）/ `gemini` / `mermaid` / `false`——四档作图引擎互补并存
+- **2026-04-16** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) ⚙️ **[`/experiment-queue`](skills/experiment-queue/SKILL.md)** — 面向多 seed 多配置 ML 实验的 SSH 任务队列。从真实 36 格 NeurIPS sweep 的痛点反推设计：OOM 感知重试（延迟退避）、stale screen 清理、wave 切换竞争防护、teacher→student 阶段依赖、崩溃安全的调度器（从 JSON 状态恢复）。声明式 grid 自动展开（如 `N × seed × n_train → 36 jobs`）。`conda_hook` + `gpu_free_threshold_mib` 可配置以适应非标准环境。≥10 jobs 时使用；`/run-experiment` 继续服务单点实验
+- **2026-04-15** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🛡️ **论文写作流水线加固** — 基于真实 NeurIPS run 失败分析的 10 个 patch。`REVIEWER_BIAS_GUARD=true`：每轮 review 用全新 thread（codex-reply 导致分数从真实 3/10 膨胀到虚假 8/10）。Reviewer Independence Protocol：禁止向 reviewer 传递修复摘要。Step 4.5 定理重述回归测试：捕捉修复轮次中的定理漂移。Step 5.5 Kill Argument Exercise：理论论文最终轮对抗攻防。位置感知 overfull 阻断。`/paper-write` 新增 Theory Paper Consistency Pass。Bib Hygiene 强制 DBLP/CrossRef 验证。Phase 5.5 Mandatory Final Claim Audit 作为投稿门控。**Review Tracing Protocol**：完整 prompt/response 对保存到 `.aris/traces/`，支持 reviewer-independence 审计（[`review-tracing.md`](skills/shared-references/review-tracing.md)，[`save_trace.sh`](tools/save_trace.sh)）。灵感来自社区贡献 @李傲龍
+- **2026-04-15** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🎨 **[FigureSpec 渲染器 v2](tools/figure_renderer.py)** — 确定性 JSON→SVG 论文作图。形状感知边裁剪（矩形/圆/椭圆/菱形）、自环、弯曲边、多行标签含 CJK 宽度估算、综合输入验证。经 5 轮 Codex review（3/10→7/10）。ARIS 技术报告中的所有架构图和工作流图均由此生成。`/paper-illustration` 新增 `--- mode: vector` 模式
+- **2026-04-14** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 📋 **[`/paper-claim-audit`](skills/paper-claim-audit/SKILL.md)** — 零上下文论文-证据验证。全新 reviewer（无任何先验上下文）逐一比对论文中的每个数字与原始结果文件。捕捉四舍五入膨胀、最优种子挑选、配置不匹配、增量误差、范围过度声明。自动集成到工作流 3（Phase 4.7）。完成三层审计链：`/experiment-audit`（代码）→ `/result-to-claim`（科学）→ `/paper-claim-audit`（报告）。👁️ **Visual PDF review** 同步加入 improvement loop——reviewer 现在看编译后 PDF，不只是 LaTeX 源码
 - **2026-04-13** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🧿 **[GPT-5.4 Pro via Oracle](skills/shared-references/reviewer-routing.md)** — `— reviewer: oracle-pro` 调用最强推理模型。API 模式（快）或浏览器模式（免费）。支持 `/research-review`、`/auto-review-loop`、`/experiment-audit`、`/proof-checker`、`/rebuttal`、`/idea-creator`、`/research-lit`。默认仍为 Codex xhigh。未安装 = 零影响。[设置 →](#-可选gpt-54-pro-via-oracle)
 - **2026-04-13** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🔬 **[`/proof-checker`](skills/proof-checker/SKILL.md)** — 严格数学证明验证。20 类问题分类、双轴严重度、侧条件检查表（DCT/MCT/Fubini/IFT/...）、反例红队、证明义务台账。自动集成到工作流 3。
 - **2026-04-10** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) ⚡ **[Effort Levels](skills/shared-references/effort-contract.md)** — `— effort: lite | balanced | max | beast`。控制工作强度。Codex reasoning 永远 `xhigh`。`beast` = 全部拉满。默认 `balanced` = 零变化。
@@ -840,17 +846,49 @@ export OPENAI_API_KEY="your-key"         # API 模式（快）
 
 ### 安装 Skills
 
+> 💡 **推荐：项目级 symlink 安装**（v0.4.2 起）。项目级隔离避免 ARIS 工作流被其他社区 skill 包（Superpowers 等）打断。Issue [#118](https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep/issues/118)。
+
 ```bash
-git clone https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep.git
-cd Auto-claude-code-research-in-sleep
+# 1. 克隆 ARIS 一次到稳定位置
+git clone https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep.git ~/aris_repo
 
-# 安装全部 skills（全局可用）
-cp -r skills/* ~/.claude/skills/
+# 2. 在每个使用 ARIS 的项目里 attach：
+cd ~/your-paper-project
+bash ~/aris_repo/tools/install_aris.sh
+# → 自动从 CLAUDE.md / AGENTS.md 检测平台（Claude Code / Codex CLI）
+# → 创建 .claude/skills/aris symlink（Codex 项目用 .agents/skills/aris）
+# → 在 CLAUDE.md / AGENTS.md 里加管理块，告诉 agent 只用项目本地 skill
+# → 在 .aris/skill-source.txt 记录安装元数据
 
-# 或者只安装特定 skill
-cp -r skills/auto-review-loop ~/.claude/skills/
-cp -r skills/research-lit ~/.claude/skills/
+# 3. 一次更新所有 attach 过的项目，只需 git pull 一次：
+cd ~/aris_repo && git pull
+
+# Windows（PowerShell，需要管理员权限或开发者模式以创建 junction）：
+.\tools\install_aris.ps1 C:\path\to\your-paper-project
 ```
+
+<details>
+<summary><b>其他安装方式（进阶）</b></summary>
+
+**项目级 copy（适合需要为单个项目定制 skill）：**
+```bash
+mkdir -p ~/your-project/.claude/skills
+bash ~/aris_repo/tools/smart_update.sh \
+    --project ~/your-project \
+    --target-subdir .claude/skills/aris \
+    --apply
+# 更新：smart_update.sh --project ~/your-project --target-subdir .claude/skills/aris --apply
+```
+
+**全局安装（适合想在所有项目里都能用 ARIS 的 power user）：**
+```bash
+cp -r ~/aris_repo/skills/* ~/.claude/skills/
+# 更新：bash tools/smart_update.sh --apply
+```
+
+> 全局安装会增加和其他全局 skill 包名字冲突的风险。只在你了解权衡，且不混装 ARIS 与 Superpowers / OpenHands 等的情况下使用。
+
+</details>
 
 ### 更新 Skills
 
