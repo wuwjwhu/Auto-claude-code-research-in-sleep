@@ -28,20 +28,25 @@ Given a method description, systematically verify its novelty:
    - What makes it different from obvious baselines?
 3. If the proposal is mathematically or conceptually motivated, explicitly extract the mechanism-level novelty claims rather than checking only surface keywords.
 
-### Phase B: Multi-Source Literature Search
-For EACH core claim, search using ALL available sources:
+### Phase B: Proposal-Specific Freshness and Overlap Check
+This skill is **not** the main literature-ingestion stage. By the time it runs inside `idea-discovery`, `/research-lit` should already have done the heavy lifting: broad paper discovery, artifact download, source-first first-pass reading, and shortlist construction.
 
-1. **Web Search** (via `WebSearch`):
-   - Search arXiv, Google Scholar, Semantic Scholar
+For EACH core claim, do only the narrower proposal-specific checks needed to stress-test novelty:
+
+1. **Freshness search** (via `WebSearch`):
+   - Search arXiv, Google Scholar, Semantic Scholar for the closest overlapping recent work
    - Use specific technical terms from the claim
    - Try at least 3 different query formulations per claim
    - Include year filters for 2024-2026
+   - Prioritize concurrent or very recent work that could invalidate the proposal's differentiation
 
-2. **Known paper databases**: Check against:
-   - ICLR 2025/2026, NeurIPS 2025, ICML 2025/2026
-   - Recent arXiv preprints (2025-2026)
+2. **Closest-work confirmation**:
+   - Check against the strongest nearby papers already surfaced by `/research-lit`
+   - Add only the missing closest papers or fresher overlaps that matter for this proposal
 
-3. **Read abstracts**: For each potentially overlapping paper, WebFetch its abstract and related work section
+3. **Targeted reading only**:
+   - Read abstracts, related work, or the most relevant sections of the closest papers
+   - Do not re-run a broad literature sweep here unless the prior literature stage was clearly insufficient
 
 ### Phase C: Cross-Model Verification
 Call REVIEWER_MODEL via `codex exec` (`codex exec`) with xhigh reasoning:

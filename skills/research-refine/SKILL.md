@@ -15,9 +15,8 @@ Use this skill when the research problem is already visible but the technical ro
 Four principles dominate this skill:
 
 1. **Do not lose the original problem.** Freeze an immutable **Problem Anchor** and reuse it in every round.
-2. **The smallest adequate mechanism wins.** Prefer the minimal intervention that directly fixes the bottleneck.
-3. **One paper, one dominant contribution.** Prefer one sharp thesis plus at most one supporting contribution.
-4. **Modern leverage is a prior, not a decoration.** When LLM / VLM / Diffusion / RL / distillation / inference-time scaling naturally fit the bottleneck, use them concretely. Do not bolt them on as buzzwords.
+2. **One paper, one dominant contribution.** Prefer one sharp thesis plus at most one supporting contribution.
+3. **Modern leverage is a prior, not a decoration.** When LLM / VLM / Diffusion / RL / distillation / inference-time scaling naturally fit the bottleneck, use them concretely. Do not bolt them on as buzzwords.
 
 ```
 User input (PROBLEM + vague APPROACH)
@@ -159,17 +158,16 @@ Do not stop at generic research questions. Make the gap operational:
 
 1. **Current pipeline failure point**: where does the baseline break?
 2. **Why naive fixes are insufficient**: larger context, more data, prompting, memory bank, or stacking more modules.
-3. **Smallest adequate intervention**: what is the least additional mechanism that could plausibly fix the bottleneck?
-4. **Frontier-native alternative**: is there a more current route using foundation-model-era primitives that better matches the bottleneck?
-5. **Core technical claim**: what exact mechanism claim could survive top-venue scrutiny?
-6. **Required evidence**: what minimum proof is needed to defend that claim?
+3. **Frontier-native alternative**: is there a more current route using foundation-model-era primitives that better matches the bottleneck?
+4. **Core technical claim**: what exact mechanism claim could survive top-venue scrutiny?
+5. **Required evidence**: what minimum proof is needed to defend that claim?
 
 #### Step 1.3: Choose the Sharpest Route
 
 Before locking the method, compare two candidate routes if both are plausible:
 
-- **Route A: Elegant minimal route** — the smallest mechanism that directly targets the bottleneck.
-- **Route B: Frontier-native route** — a more modern route that uses LLM / VLM / Diffusion / RL / distillation / inference-time scaling *only if* it gives a cleaner or stronger story.
+- **Route A: Elegant minimal route** — the smallest mechanism that directly targets the bottleneck *only if* it gives a mathematical proof.
+- **Route B: Frontier-native route** — a more modern route that uses LLM / VLM / Diffusion / RL / distillation / inference-time scaling if it gives a cleaner or stronger story.
 
 Then decide:
 
@@ -238,7 +236,7 @@ Use this structure:
 
 ## Method Thesis
 - One-sentence thesis:
-- Why this is the smallest adequate intervention:
+- Why this is the smallest adequate intervention with a mathematical proof:
 - Why this route is timely in the foundation-model era:
 
 ## Contribution Focus
@@ -330,7 +328,7 @@ Your job IS to stress-test whether the proposed method:
 (4) uses foundation-model-era techniques appropriately when they are the natural fit.
 
 Review principles:
-- Prefer the smallest adequate mechanism over a larger system.
+- Prefer the smallest adequate mechanism with a mathematical proof.
 - Penalize parallel contributions that make the paper feel unfocused.
 - If a modern LLM / VLM / Diffusion / RL route would clearly produce a better paper, say so concretely.
 - If the proposal is already modern enough, do NOT force trendy components.
@@ -469,7 +467,7 @@ Save to `refine-logs/round-N-refinement.md`:
 - Dominant contribution after revision:
 - Components removed or merged:
 - Reviewer suggestions rejected as unnecessary complexity:
-- Why the remaining mechanism is still the smallest adequate route:
+- Why the remaining mechanism is still the smallest adequate route (Can it be proven mathematically?):
 
 ## Changes Made
 
@@ -702,7 +700,6 @@ Suggested next step: /experiment-plan
 
 - **Anchor first, every round.** Always carry forward the same Problem Anchor.
 - **One paper, one dominant contribution.** Avoid multiple parallel contributions unless the paper truly needs them.
-- **The smallest adequate mechanism wins.** Bigger is not automatically better.
 - **Prefer reuse over invention.** Start from strong existing backbones and add only what the bottleneck requires.
 - **Modern techniques are a prior, not a decoration.** Use LLM / VLM / Diffusion / RL-era components when they sharpen the method, not when they only make the proposal sound trendy.
 - **Minimal experiments.** Inside this skill, experiments only need to prove the core claims.

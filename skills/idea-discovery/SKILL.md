@@ -127,6 +127,7 @@ If `REPORT` was set explicitly, forward it into `/research-lit`. Otherwise rely 
 - Search arXiv, Google Scholar, Semantic Scholar for recent papers
 - Use `/research-lit`'s source-first local paper ingestion path when extracted `.tex` bundles are available
 - Delegate bounded `.tex` digestion to sub-agents that return compact digests rather than pulling raw source into the main context
+- Build and refresh `papers/index.md` so each ingested paper records its PDF path, main TeX path, and concise summary fields for later reuse
 - Build a landscape map: sub-directions, approaches, open problems
 - Identify structural gaps and recurring limitations
 - Output a normalized literature summary for later phases
@@ -153,6 +154,7 @@ Invoke `/idea-creator` with the landscape context (and `idea-stage/REF_PAPER_SUM
 
 **What this does:**
 - If `idea-stage/REF_PAPER_SUMMARY.md` exists, include it as context — ideas should build on, improve, or extend the reference paper
+- Read `papers/index.md` first when available so brainstorming is anchored to the local paper library and its recorded PDF/main-TeX paths plus concise paper digests
 - If Phase 1 used prepared reports, rely on the normalized literature synthesis rather than rereading raw `deep-research/*.md`
 - Brainstorm 8-12 concrete proposals via GPT-5.4 xhigh
 - Filter by mathematical novelty, technical depth, mechanism clarity, differentiation from closest prior work, and paper-worthiness
@@ -173,7 +175,7 @@ I will now harden these with novelty-check and reviewer scrutiny before asking y
 
 ### Phase 3: Deep Novelty Verification
 
-For each shortlisted proposal, run a thorough novelty check:
+For each shortlisted proposal, run a targeted novelty check:
 
 ```
 /novelty-check "[shortlisted proposal 1 description]"
@@ -181,10 +183,15 @@ For each shortlisted proposal, run a thorough novelty check:
 ```
 
 **What this does:**
-- Multi-source literature search (arXiv, Scholar, Semantic Scholar)
-- Cross-verify with GPT-5.4 xhigh
-- Check for concurrent work (last 3-6 months)
-- Identify closest existing work and differentiation points
+- Builds on the paper discovery and first-pass reading already done by `/research-lit`
+- Runs proposal-specific freshness checks for the closest overlapping work
+- Cross-verifies with GPT-5.4 xhigh
+- Checks for concurrent work (last 3-6 months)
+- Identifies the closest existing work and the remaining differentiation points
+
+**What this should not do by default:**
+- Re-run the broad literature sweep already done in Phase 1
+- Replace `research-lit` as the main paper download / source-reading stage
 
 **Update `idea-stage/IDEA_REPORT.md`** with deep novelty results. Eliminate any proposal whose core mechanism is already covered by existing work.
 

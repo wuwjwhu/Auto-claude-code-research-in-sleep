@@ -52,22 +52,28 @@ If this skill is being called from `/idea-discovery`, treat the Phase 1 output f
 
 1. **Use normalized upstream synthesis first**: If `/research-lit` already incorporated prepared deep-research markdown reports, use its normalized synthesis as the main landscape map instead of rereading raw `deep-research/*.md`.
 
-2. **Scan local paper library when needed**: Check `papers/` and `literature/` in the project directory for existing PDFs only to fill gaps or validate missing details. Read first 3 pages of relevant papers to build a baseline understanding before searching online.
+2. **Read `papers/index.md` first when available**: If `/research-lit` already generated `papers/index.md`, read it before brainstorming and treat it as the primary local-paper digest.
+   - Use it to recover each paper's `pdf_path`, `main_tex_path`, `brief_summary`, `problem`, `method`, `result`, and `takeaway`.
+   - Use it to avoid reopening raw `.tex` or PDFs unless the index is missing a critical detail.
+   - Treat the indexed papers as known prior work and as concrete mechanism seeds or anti-patterns for brainstorming.
 
-3. **Search recent literature** using WebSearch when the upstream synthesis is missing, stale, or incomplete:
+3. **Scan local paper library only when needed**: If `papers/index.md` is missing, stale, or insufficient, then check `papers/` and `literature/` in the project directory for existing PDFs/source bundles to fill gaps or validate missing details. Read first 3 pages of relevant papers only when the index or upstream synthesis cannot answer the question.
+
+4. **Search recent literature** using WebSearch when the upstream synthesis is missing, stale, or incomplete:
    - Top venues in the last 2 years (NeurIPS, ICML, ICLR, ACL, EMNLP, etc.)
    - Recent arXiv preprints (last 6 months)
    - Use 5+ different query formulations
    - Read abstracts and introductions of the top 10-15 papers
 
-4. **Build a landscape map**:
+5. **Build a landscape map**:
    - Group papers by sub-direction / approach
    - Identify what has been tried and what hasn't
    - Carry forward explicit theme clusters and benchmark anchors from prepared-report-derived synthesis when still supported
+   - Merge in the concise local-paper evidence from `papers/index.md` when present
    - Note recurring limitations mentioned in "Future Work" sections
    - Flag any open problems explicitly stated by multiple papers
 
-5. **Identify structural gaps**:
+6. **Identify structural gaps**:
    - Prefer explicit gap statements and unresolved contradictions surfaced by `/research-lit`
    - Methods that work in domain A but haven't been tried in domain B
    - Contradictory findings between papers (opportunity for resolution)
@@ -88,7 +94,12 @@ Research direction: [user's direction]
 Here is the current landscape:
 [paste landscape map from Phase 1]
 
+If available, here is the local paper index from `papers/index.md`:
+[paste the most relevant indexed entries: title, brief_summary, problem, method, result, takeaway, pdf_path, main_tex_path]
+
 If the landscape came from `/research-lit` with prepared deep-research markdown, trust its normalized theme clusters, benchmark anchors, and explicit gap statements more than raw narrative prose.
+
+Use `papers/index.md` as the canonical local-paper digest. Do not ignore it during brainstorming: use it to avoid reinventing known mechanisms, to anchor ideas against the actual local paper set, and to identify concrete opportunities suggested by the indexed takeaways.
 
 Key gaps identified:
 [paste gaps from Phase 1]

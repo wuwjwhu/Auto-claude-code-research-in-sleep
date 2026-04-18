@@ -20,8 +20,8 @@ Research topic: $ARGUMENTS
 - **PREPARED_REPORT_DIR = `deep-research/`** — Preferred directory for prewritten deep research markdown reports generated outside this workflow.
 - **MAX_PREPARED_REPORTS = 2** — In `— report: auto` mode, read at most the top 1-2 most relevant reports to avoid context bloat.
 - **MAX_LOCAL_PAPERS = 20** — Maximum number of local paper bundles to scan. Prefer extracted `.tex` source when available; fall back to PDFs.
-- **ARXIV_DOWNLOAD = true** — By default, download top 3-5 most relevant arXiv reading artifacts to PAPER_LIBRARY after search: PDF plus source archive and extracted source tree when available.
-- **ARXIV_MAX_DOWNLOAD = 5** — Maximum number of arXiv papers to download when `ARXIV_DOWNLOAD = true`.
+- **ARXIV_DOWNLOAD = true** — By default, download 10~20 most relevant arXiv reading artifacts to PAPER_LIBRARY after search: PDF plus source archive and extracted source tree when available.
+- **ARXIV_MAX_DOWNLOAD = 20** — Maximum number of arXiv papers to download when `ARXIV_DOWNLOAD = true`.
 
 > 💡 Overrides:
 > - `/research-lit "topic" — paper library: ~/my_papers/` — custom local paper path
@@ -164,7 +164,7 @@ Before searching online, check if the user already has relevant papers locally.
 
 4. **Filter by relevance**: Match filenames and available title/abstract text against the research topic. Skip clearly unrelated papers.
 
-5. **Digest relevant local bundles via a sub-agent contract**: For each relevant local bundle (up to MAX_LOCAL_PAPERS), do **not** read raw `.tex` directly into the main context by default. Instead, delegate bounded source digestion to a sub-agent and only keep the returned structured digest.
+5. **Digest relevant local bundles via a sub-agent contract**: For each relevant local bundle (up to MAX_LOCAL_PAPERS), do **not** read raw `.tex` directly into the main context by default. Instead, delegate bounded source digestion to a sub-agent and only keep the returned structured digest. Each sub-agent must also resolve the paper's reading artifacts for later indexing: record the project-relative `pdf_path` when a PDF exists, record `source_coverage.main_tex_path` when a readable main TeX file exists, and return a one-paragraph `brief_summary` plus normalized `problem`, `method`, `result`, and `takeaway` fields for `papers/index.md`.
 
    ### Mode A — `broad_sweep`
    Use this as the default local-bundle read mode.
@@ -190,6 +190,7 @@ Before searching online, check if the user already has relevant papers locally.
    mode: broad_sweep
    paper_id: "..."
    bundle_path: "..."
+   pdf_path: "papers/...pdf | literature/...pdf | null"
    artifact_used: "tex_source | pdf | metadata_only"
    confidence: "high | medium | low"
    bibliography:
@@ -203,9 +204,11 @@ Before searching online, check if the user already has relevant papers locally.
      sections_inspected: ["title", "abstract", "introduction"]
      extra_files_opened: ["..."]
    digest:
+     brief_summary: "..."
      problem: "..."
      method: "..."
      results: "..."
+     takeaway: "..."
      relevance: "..."
      relation_label: "direct | adjacent | tangential | unclear"
    signals:
@@ -242,6 +245,7 @@ Before searching online, check if the user already has relevant papers locally.
    mode: deep_read
    paper_id: "..."
    bundle_path: "..."
+   pdf_path: "papers/...pdf | literature/...pdf | null"
    artifact_used: "tex_source | pdf | metadata_only"
    confidence: "high | medium | low"
    bibliography:
@@ -257,9 +261,11 @@ Before searching online, check if the user already has relevant papers locally.
      extra_files_opened: ["..."]
      appendix_inspected: false
    normalized_digest:
+     brief_summary: "..."
      problem: "..."
      method: "..."
      results: "..."
+     takeaway: "..."
      relevance: "..."
      source: "local"
      artifact: "tex_source | pdf | metadata_only"
@@ -292,6 +298,34 @@ Before searching online, check if the user already has relevant papers locally.
 
 6. **Build local knowledge base**: Compile the returned digests into a "papers you already have" section. Use `broad_sweep` as the default and only promote a small number of direct papers to `deep_read`.
 
+7. **Write `papers/index.md`**: After local bundle digestion (and again after any new arXiv bundles are downloaded and digested), generate or refresh `papers/index.md` as a reusable paper-library index.
+   - Write one entry per resolved paper bundle, not one per artifact file.
+   - Reuse the sub-agent outputs instead of rereading raw `.tex` in the main workflow.
+   - Prefer project-relative paths.
+   - Required fields per paper:
+     - `paper_id`
+     - `title`
+     - `pdf_path`
+     - `main_tex_path`
+     - `artifact_used`
+     - `brief_summary`
+     - `problem`
+     - `method`
+     - `result`
+     - `takeaway`
+     - `relation_label`
+     - `confidence`
+   - If `deep_read` exists for a paper, let its normalized digest overwrite the corresponding `broad_sweep` summary fields in the index.
+   - Recommended format:
+
+   ```markdown
+   # Paper Index
+
+   | Paper | PDF | Main TeX | Artifact | Summary | Problem | Method | Result | Takeaway |
+   |-------|-----|----------|----------|---------|---------|--------|--------|----------|
+   | ... | `papers/foo.pdf` | `papers/foo.src/main.tex` | tex_source | ... | ... | ... | ... | ... |
+   ```
+
 > 📚 Prefer source-first reading because PDF text extraction often pollutes context with broken lines, headers, and damaged math. Keep raw `.tex` out of the main context whenever possible; retain only the digest returned by the sub-agent.
 
 ### Step 1: Search (external)
@@ -305,18 +339,20 @@ Before searching online, check if the user already has relevant papers locally.
 
 Locate the fetch script and search arXiv directly:
 ```bash
-# Try to find arxiv_fetch.py
-SCRIPT=$(find tools/ -name "arxiv_fetch.py" 2>/dev/null | head -1)
-# If not found, check ARIS install
-[ -z "$SCRIPT" ] && SCRIPT=$(find ~/.claude/skills/arxiv/ -name "arxiv_fetch.py" 2>/dev/null | head -1)
+# Prefer the helper shipped inside the skill installation
+SCRIPT="$HOME/.claude/skills/arxiv/arxiv_fetch.py"
+# Fall back to the project-local copy when running from this repo
+[ ! -f "$SCRIPT" ] && SCRIPT="skills/arxiv/arxiv_fetch.py"
+# Last fallback: top-level project helper
+[ ! -f "$SCRIPT" ] && SCRIPT="tools/arxiv_fetch.py"
 
 # Search arXiv API for structured results (title, abstract, authors, categories)
 python3 "$SCRIPT" search "QUERY" --max 10
 ```
 
-If `arxiv_fetch.py` is not found, fall back to WebSearch for arXiv (same as before).
+If `arxiv_fetch.py` is not found in any of those locations, report this clearly and treat it as a setup failure for source-first arXiv ingestion. Do **not** silently degrade into a WebSearch-only path when `ARXIV_DOWNLOAD = true`, because the paper-bundle download and source-first reading stages depend on the helper being available.
 
-The arXiv API returns structured metadata (title, abstract, full author list, categories, dates) — richer than WebSearch snippets. Merge these results with WebSearch findings and de-duplicate.
+The arXiv API returns structured metadata (title, abstract, full author list, categories, dates) — richer than WebSearch snippets. Merge these results with the other sources and de-duplicate.
 
 **Semantic Scholar API search** (only when `semantic-scholar` is in sources):
 
@@ -324,7 +360,7 @@ When the user explicitly requests `— sources: semantic-scholar` (or `— sourc
 
 **DeepXiv search** (only when `deepxiv` is in sources)** and **Exa search** (only when `exa` is in sources)** remain unchanged from the current workflow.
 
-**Optional arXiv artifact download** (default-on when `ARXIV_DOWNLOAD = true`):
+**Required arXiv artifact download stage** (default-on when `ARXIV_DOWNLOAD = true`):
 
 After all sources are searched and papers are ranked by relevance:
 ```bash
@@ -336,6 +372,9 @@ python3 "$SCRIPT" download ARXIV_ID --dir papers/
 - Skip artifacts already in the local library
 - 1-second delay between downloads (rate limiting)
 - Preserve partial success when source is unavailable but PDF succeeds
+- After download, treat the new bundles as part of the same local paper library flow: run the same sub-agent digestion, capture `pdf_path` / `main_tex_path`, and refresh `papers/index.md`
+- This stage is part of the intended default literature-ingestion flow, not an optional nice-to-have when `ARXIV_DOWNLOAD = true`
+- The purpose is to let `research-lit` own paper discovery plus first-pass reading from local artifacts before later proposal-specific novelty checks
 
 ### Step 2: Analyze Each Paper
 For each relevant paper (from all sources), extract:
@@ -384,6 +423,8 @@ If Zotero BibTeX was exported, include a `references.bib` snippet for direct use
 
 ### Step 5: Save (if requested)
 - Save paper bundles to `literature/` or `papers/`
+- Save or refresh `papers/index.md` whenever local or downloaded bundles were analyzed
+- Append `papers/index.md` to `MANIFEST.md` using the shared output manifest protocol
 - Update related work notes in project memory
 - If Obsidian is available, optionally create a literature review note in the vault
 

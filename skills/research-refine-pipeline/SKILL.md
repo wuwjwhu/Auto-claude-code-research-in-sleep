@@ -55,7 +55,6 @@ Do not plan a large experiment suite on top of an unstable method. First stabili
 Run the `research-refine` workflow and keep its V3 philosophy intact:
 
 - preserve the Problem Anchor
-- prefer the smallest adequate mechanism
 - keep one dominant contribution
 - modernize only when it improves the paper
 
