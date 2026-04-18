@@ -1,36 +1,38 @@
 ---
 name: idea-discovery
-description: "Workflow 1: Full idea discovery pipeline. Orchestrates research-lit → idea-creator → novelty-check → research-review to go from a broad research direction to validated, pilot-tested ideas. Use when user says \"找idea全流程\", \"idea discovery pipeline\", \"从零开始找方向\", or wants the complete idea exploration workflow."
+description: "Workflow 1: Proposal-shortlist idea discovery. Orchestrates research-lit → idea-creator → novelty-check → research-review → research-refine → experiment-plan to go from a broad research direction to a small set of top-tier proposals, pause for user choice, and only then generate the final experiment plan for the chosen proposal. Use when user says \"找idea全流程\", \"idea discovery pipeline\", \"从零开始找方向\", or wants the complete idea exploration workflow."
 argument-hint: [research-direction]
 allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, WebSearch, WebFetch, Agent, Skill
 ---
 
-# Workflow 1: Idea Discovery Pipeline
+# Workflow 1: Proposal-Shortlist Idea Discovery Pipeline
 
 Orchestrate a complete idea discovery workflow for: **$ARGUMENTS**
 
 ## Overview
 
-This skill chains sub-skills into a single automated pipeline:
+This skill chains sub-skills into a staged pipeline:
 
 ```
-/research-lit → /idea-creator → /novelty-check → /research-review → /research-refine-pipeline
-  (survey)      (brainstorm)    (verify novel)    (critical feedback)  (refine method + plan experiments)
+/research-lit → /idea-creator → /novelty-check → /research-review → user chooses → /research-refine → /experiment-plan
+  (survey)      (generate + rank)  (verify novelty)  (stress-test proposals) (hard stop)   (refine chosen)   (plan evidence)
 ```
 
-Each phase builds on the previous one's output. The final deliverables are a validated `idea-stage/IDEA_REPORT.md` with ranked ideas, plus a refined proposal (`refine-logs/FINAL_PROPOSAL.md`) and experiment plan (`refine-logs/EXPERIMENT_PLAN.md`) for the top idea.
+The goal is **not** to lock in a weak proposal early or to run MVP experiments before the idea is mature. The goal is to produce a small set of top-tier, well-motivated, mathematically novel, technically deep proposals, harden that shortlist with novelty and reviewer scrutiny, then **stop and wait for the user to choose one**. Only after one proposal is chosen should the workflow refine it into a final proposal and generate the experiment plan.
+
+Final deliverables:
+- `idea-stage/IDEA_REPORT.md` — ranked shortlist of hardened proposals
+- `idea-stage/IDEA_CANDIDATES.md` — optional compact shortlist summary
+- `refine-logs/FINAL_PROPOSAL.md` — refined version of the **chosen** proposal only
+- `refine-logs/EXPERIMENT_PLAN.md` and `refine-logs/EXPERIMENT_TRACKER.md` — generated only **after** the chosen proposal is refined
 
 ## Constants
 
-- **PILOT_MAX_HOURS = 2** — Skip any pilot experiment estimated to take > 2 hours per GPU. Flag as "needs manual pilot" in the report.
-- **PILOT_TIMEOUT_HOURS = 3** — Hard timeout: kill any running pilot that exceeds 3 hours. Collect partial results if available.
-- **MAX_PILOT_IDEAS = 3** — Run pilots for at most 3 top ideas in parallel. Additional ideas are validated on paper only.
-- **MAX_TOTAL_GPU_HOURS = 8** — Total GPU budget across all pilots. If exceeded, skip remaining pilots and note in report.
-- **AUTO_PROCEED = true** — If user doesn't respond at a checkpoint, automatically proceed with the best option after presenting results. Set to `false` to always wait for explicit user confirmation.
+- **AUTO_PROCEED = false** — Default: do not auto-continue at checkpoints that materially change scope. The final shortlist-selection gate must wait for explicit user choice.
 - **REVIEWER_MODEL = `gpt-5.4`** — Model used via `codex exec`. Must be an OpenAI model (e.g., `gpt-5.4`, `o3`, `gpt-4o`). Passed to sub-skills.
 - **OUTPUT_DIR = `idea-stage/`** — All idea-stage outputs go here. Create the directory if it doesn't exist.
-- **ARXIV_DOWNLOAD = false** — When `true`, `/research-lit` downloads the top relevant arXiv PDFs during Phase 1. When `false` (default), only fetches metadata. Passed through to `/research-lit`.
-- **COMPACT = false** — When `true`, generate compact summary files for short-context models and session recovery. Writes `idea-stage/IDEA_CANDIDATES.md` (top 3-5 ideas only) at the end of this workflow. Downstream skills read this instead of the full `idea-stage/IDEA_REPORT.md`.
+- **ARXIV_DOWNLOAD = true** — By default, `/research-lit` downloads the top relevant arXiv reading artifacts during Phase 1: PDF plus source archive / extracted source tree when available. Passed through to `/research-lit`.
+- **COMPACT = false** — When `true`, generate compact summary files for short-context models and session recovery. Writes `idea-stage/IDEA_CANDIDATES.md` (top 2-3 proposals only) at the end of the shortlist stage.
 - **REF_PAPER = false** — Reference paper to base ideas on. Accepts: local PDF path, arXiv URL, or any paper URL. When set, the paper is summarized first (`idea-stage/REF_PAPER_SUMMARY.md`), then idea generation uses it as context. Combine with `base repo` for "improve this paper with this codebase" workflows.
 - **REPORT = `auto`** — Prepared deep research markdown input for Phase 1. Accepts: `auto`, `none`, or a specific markdown path such as `deep-research/deep-research-report.md`.
 
@@ -89,30 +91,13 @@ Summarize the reference paper before searching the literature:
 3. **If other URL**:
    - Fetch and extract content via WebFetch
 
-4. **Generate `idea-stage/REF_PAPER_SUMMARY.md`**:
-
-```markdown
-# Reference Paper Summary
-
-**Title**: [paper title]
-**Authors**: [authors]
-**Venue**: [venue, year]
-
-## What They Did
-[2-3 sentences: core method and contribution]
-
-## Key Results
-[Main quantitative findings]
-
-## Limitations & Open Questions
-[What the paper didn't solve, acknowledged weaknesses, future work suggestions]
-
-## Potential Improvement Directions
-[Based on the limitations, what could be improved or extended?]
-
-## Codebase
-[If `base repo` is also set: link to the repo and note which parts correspond to the paper]
-```
+4. **Generate `idea-stage/REF_PAPER_SUMMARY.md`** with:
+   - paper title / venue / authors
+   - what they did
+   - key results
+   - limitations and open questions
+   - promising improvement directions
+   - codebase mapping if a base repo is also provided
 
 **🚦 Checkpoint:** Present the summary to the user:
 
@@ -140,9 +125,11 @@ If `REPORT` was set explicitly, forward it into `/research-lit`. Otherwise rely 
 **What this does:**
 - Read prepared deep-research markdown first when available
 - Search arXiv, Google Scholar, Semantic Scholar for recent papers
+- Use `/research-lit`'s source-first local paper ingestion path when extracted `.tex` bundles are available
+- Delegate bounded `.tex` digestion to sub-agents that return compact digests rather than pulling raw source into the main context
 - Build a landscape map: sub-directions, approaches, open problems
 - Identify structural gaps and recurring limitations
-- Output a normalized literature summary (saved to working notes) for later phases
+- Output a normalized literature summary for later phases
 
 **🚦 Checkpoint:** Present the landscape summary to the user. Ask:
 
@@ -150,14 +137,13 @@ If `REPORT` was set explicitly, forward it into `/research-lit`. Otherwise rely 
 📚 Literature survey complete. Here's what I found:
 - [key findings, gaps, open problems]
 
-Does this match your understanding? Should I adjust the scope before generating ideas?
-(If no response, I'll proceed with the top-ranked direction.)
+Does this match your understanding? Should I adjust the scope before generating proposals?
 ```
 
-- **User approves** (or no response + AUTO_PROCEED=true) → proceed to Phase 2 with best direction.
-- **User requests changes** (e.g., "focus more on X", "ignore Y", "too broad") → refine the search with updated queries, re-run `/research-lit` with adjusted scope, and present again. Repeat until the user is satisfied.
+- **User approves** → proceed to Phase 2 with best direction.
+- **User requests changes** (e.g., "focus more on X", "ignore Y", "too broad") → refine the search with updated queries, re-run `/research-lit` with adjusted scope, and present again.
 
-### Phase 2: Idea Generation + Filtering + Pilots
+### Phase 2: Proposal Generation + Conceptual Filtering
 
 Invoke `/idea-creator` with the landscape context (and `idea-stage/REF_PAPER_SUMMARY.md` if available):
 
@@ -168,37 +154,30 @@ Invoke `/idea-creator` with the landscape context (and `idea-stage/REF_PAPER_SUM
 **What this does:**
 - If `idea-stage/REF_PAPER_SUMMARY.md` exists, include it as context — ideas should build on, improve, or extend the reference paper
 - If Phase 1 used prepared reports, rely on the normalized literature synthesis rather than rereading raw `deep-research/*.md`
-- Brainstorm 8-12 concrete ideas via GPT-5.4 xhigh
-- Filter by feasibility, compute cost, quick novelty search
-- Deep validate top ideas (full novelty check + devil's advocate)
-- Run parallel pilot experiments on available GPUs (top 2-3 ideas)
-- Rank by empirical signal
-- Output `idea-stage/IDEA_REPORT.md`
+- Brainstorm 8-12 concrete proposals via GPT-5.4 xhigh
+- Filter by mathematical novelty, technical depth, mechanism clarity, differentiation from closest prior work, and paper-worthiness
+- Reduce to a shortlist of 2-3 strong proposals
+- Output a proposal-first `idea-stage/IDEA_REPORT.md`
 
-**🚦 Checkpoint:** Present `idea-stage/IDEA_REPORT.md` ranked ideas to the user. Ask:
+**🚦 Checkpoint:** Present the provisional shortlist to the user:
 
 ```
-💡 Generated X ideas, filtered to Y, piloted Z. Top results:
+💡 Generated X proposals and filtered to Y strong candidates. Current shortlist:
 
-1. [Idea 1] — Pilot: POSITIVE (+X%)
-2. [Idea 2] — Pilot: WEAK POSITIVE (+Y%)
-3. [Idea 3] — Pilot: NEGATIVE, eliminated
+1. [Proposal 1] — [one-line novelty thesis]
+2. [Proposal 2] — [one-line novelty thesis]
+3. [Proposal 3] — [one-line novelty thesis]
 
-Which ideas should I validate further? Or should I regenerate with different constraints?
-(If no response, I'll proceed with the top-ranked ideas.)
+I will now harden these with novelty-check and reviewer scrutiny before asking you to choose one.
 ```
-
-- **User picks ideas** (or no response + AUTO_PROCEED=true) → proceed to Phase 3 with top-ranked ideas.
-- **User unhappy with all ideas** → collect feedback ("what's missing?", "what direction do you prefer?"), update the prompt with user's constraints, and re-run Phase 2 (idea generation). Repeat until the user selects at least 1 idea.
-- **User wants to adjust scope** → go back to Phase 1 with refined direction.
 
 ### Phase 3: Deep Novelty Verification
 
-For each top idea (positive pilot signal), run a thorough novelty check:
+For each shortlisted proposal, run a thorough novelty check:
 
 ```
-/novelty-check "[top idea 1 description]"
-/novelty-check "[top idea 2 description]"
+/novelty-check "[shortlisted proposal 1 description]"
+/novelty-check "[shortlisted proposal 2 description]"
 ```
 
 **What this does:**
@@ -207,55 +186,99 @@ For each top idea (positive pilot signal), run a thorough novelty check:
 - Check for concurrent work (last 3-6 months)
 - Identify closest existing work and differentiation points
 
-**Update `idea-stage/IDEA_REPORT.md`** with deep novelty results. Eliminate any idea that turns out to be already published.
+**Update `idea-stage/IDEA_REPORT.md`** with deep novelty results. Eliminate any proposal whose core mechanism is already covered by existing work.
 
 ### Phase 4: External Critical Review
 
-For the surviving top idea(s), get brutal feedback:
+For the surviving shortlisted proposals, get brutal feedback:
 
 ```
-/research-review "[top idea with hypothesis + pilot results]"
+/research-review "[shortlisted proposal description + novelty findings]"
 ```
 
 **What this does:**
 - GPT-5.4 xhigh acts as a senior reviewer (NeurIPS/ICML level)
-- Scores the idea, identifies weaknesses, suggests minimum viable improvements
-- Provides concrete feedback on experimental design
+- Scores conceptual sharpness, technical depth, mechanism clarity, and contribution quality
+- Identifies the strongest reviewer objections and missing technical detail
+- Specifies what evidence would later be required without forcing a full experiment plan yet
 
-**Update `idea-stage/IDEA_REPORT.md`** with reviewer feedback and revised plan.
+**Update `idea-stage/IDEA_REPORT.md`** with reviewer feedback and revised rankings.
 
-### Phase 4.5: Method Refinement + Experiment Planning
+### Phase 4.5: Final Shortlist Checkpoint — User Choice Required
 
-After review, refine the top idea into a concrete proposal and plan experiments:
+Present the final hardened shortlist to the user:
 
 ```
-/research-refine-pipeline "[top idea description + pilot results + reviewer feedback]"
+📋 Proposal shortlist ready. Top candidates:
+
+1. [Proposal 1]
+   - Novelty: [summary]
+   - Technical depth: [summary]
+   - Strongest objection: [summary]
+
+2. [Proposal 2]
+   - Novelty: [summary]
+   - Technical depth: [summary]
+   - Strongest objection: [summary]
+
+3. [Proposal 3]
+   - Novelty: [summary]
+   - Technical depth: [summary]
+   - Strongest objection: [summary]
+
+Please choose one proposal, request regeneration with new constraints, or stop here.
+```
+
+**⛔ STOP HERE and wait for user response.** Do **not** auto-proceed to proposal refinement or experiment planning from this gate.
+
+Options:
+- Reply **with a proposal number/title** → proceed to Phase 5 with that proposal
+- Reply with **adjustments** → update the constraints and regenerate the shortlist
+- Reply **"stop"** → save the shortlist artifacts and end the workflow
+
+### Phase 5: Refine the Chosen Proposal
+
+After the user chooses one proposal, refine it into a concrete method:
+
+```
+/research-refine "[chosen proposal description + novelty findings + reviewer feedback]"
 ```
 
 **What this does:**
 - Freeze a **Problem Anchor** to prevent scope drift
-- Iteratively refine the method via GPT-5.4 review (up to 5 rounds, until score ≥ 9)
-- Generate a claim-driven experiment roadmap with ablations, budgets, and run order
-- Output: `refine-logs/FINAL_PROPOSAL.md`, `refine-logs/EXPERIMENT_PLAN.md`, `refine-logs/EXPERIMENT_TRACKER.md`
+- Iteratively refine the method via GPT-5.4 review
+- Produce a focused, paper-worthy final proposal
+- Output: `refine-logs/FINAL_PROPOSAL.md`, `refine-logs/REVIEW_SUMMARY.md`, `refine-logs/REFINEMENT_REPORT.md`
 
 **🚦 Checkpoint:** Present the refined proposal summary:
 
 ```
-🔬 Method refined and experiment plan ready:
+🔬 Chosen proposal refined:
 - Problem anchor: [anchored problem]
 - Method thesis: [one sentence]
 - Dominant contribution: [what's new]
-- Must-run experiments: [N blocks]
-- First 3 runs to launch: [list]
+- Key reviewer risk still remaining: [risk]
 
-Proceed to implementation? Or adjust the proposal?
+Ready to generate the final experiment plan?
 ```
 
-- **User approves** (or AUTO_PROCEED=true) → proceed to Final Report.
+- **User approves** → proceed to Phase 5.5.
 - **User requests changes** → pass feedback to `/research-refine` for another round.
-- **Lite mode:** If reviewer score < 6 or pilot was weak, run `/research-refine` only (skip `/experiment-plan`) and note remaining risks in the report.
 
-### Phase 5: Final Report
+### Phase 5.5: Final Experiment Plan for the Chosen Proposal
+
+Only after the chosen proposal is refined and accepted, generate the final experiment plan:
+
+```
+/experiment-plan "[refine-logs/FINAL_PROPOSAL.md]"
+```
+
+**What this does:**
+- Freeze the claims that the final paper must defend
+- Generate a claim-driven experiment roadmap with ablations, budgets, and run order
+- Output: `refine-logs/EXPERIMENT_PLAN.md`, `refine-logs/EXPERIMENT_TRACKER.md`
+
+### Phase 6: Final Report
 
 Finalize `idea-stage/IDEA_REPORT.md` with all accumulated information:
 
@@ -264,62 +287,60 @@ Finalize `idea-stage/IDEA_REPORT.md` with all accumulated information:
 
 **Direction**: $ARGUMENTS
 **Date**: [today]
-**Pipeline**: research-lit → idea-creator → novelty-check → research-review → research-refine-pipeline
+**Pipeline**: research-lit → idea-creator → novelty-check → research-review → user choice → research-refine → experiment-plan
 
 ## Executive Summary
-[2-3 sentences: best idea, key evidence, recommended next step]
+[2-3 sentences: best shortlisted proposals, chosen proposal, recommended next step]
 
 ## Literature Landscape
 [from Phase 1]
 
-## Ranked Ideas
+## Ranked Proposal Shortlist
 [from Phase 2, updated with Phase 3-4 results]
 
-### 🏆 Idea 1: [title] — RECOMMENDED
-- Pilot: POSITIVE (+X%)
-- Novelty: CONFIRMED (closest: [paper], differentiation: [what's different])
-- Reviewer score: X/10
-- Next step: implement full experiment → /auto-review-loop
+### Proposal 1: [title]
+- Core thesis:
+- Novelty: [closest work + true delta]
+- Technical depth:
+- Strongest reviewer objection:
+- Status: SHORTLISTED / CHOSEN / ELIMINATED
 
-### Idea 2: [title] — BACKUP
+### Proposal 2: [title]
 ...
 
-## Eliminated Ideas
-[ideas killed at each phase, with reasons]
-
-## Refined Proposal
+## Chosen Proposal
 - Proposal: `refine-logs/FINAL_PROPOSAL.md`
 - Experiment plan: `refine-logs/EXPERIMENT_PLAN.md`
 - Tracker: `refine-logs/EXPERIMENT_TRACKER.md`
 
 ## Next Steps
-- [ ] /run-experiment to deploy experiments from the plan
-- [ ] /auto-review-loop to iterate until submission-ready
+- [ ] /run-experiment to deploy experiments from the chosen plan
+- [ ] /auto-review-loop to iterate after first full results
 - [ ] Or invoke /research-pipeline for the complete end-to-end flow
 ```
 
-### Phase 5.5: Write Compact Files (when COMPACT = true)
+### Phase 6.5: Write Compact Files (when COMPACT = true)
 
 **Skip entirely if `COMPACT` is `false`.**
 
-Write `idea-stage/IDEA_CANDIDATES.md` — a lean summary of the top 3-5 surviving ideas:
+Write `idea-stage/IDEA_CANDIDATES.md` — a lean summary of the top 2-3 surviving proposals:
 
 ```markdown
 # Idea Candidates
 
-| # | Idea | Pilot Signal | Novelty | Reviewer Score | Status |
-|---|------|-------------|---------|---------------|--------|
-| 1 | [title] | +X% | Confirmed | X/10 | RECOMMENDED |
-| 2 | [title] | +Y% | Confirmed | X/10 | BACKUP |
-| 3 | [title] | Negative | — | — | ELIMINATED |
+| # | Proposal | Novelty | Technical Depth | Reviewer Score | Status |
+|---|----------|---------|-----------------|----------------|--------|
+| 1 | [title] | [summary] | [summary] | X/10 | SHORTLISTED |
+| 2 | [title] | [summary] | [summary] | X/10 | CHOSEN / BACKUP |
+| 3 | [title] | [summary] | [summary] | X/10 | ELIMINATED |
 
-## Active Idea: #1 — [title]
-- Hypothesis: [one sentence]
-- Key evidence: [pilot result]
-- Next step: /experiment-bridge or /research-refine
+## Chosen Proposal
+- Thesis: [one sentence]
+- Key differentiator: [one sentence]
+- Next step: /experiment-plan
 ```
 
-This file is intentionally small (~30 lines) so downstream skills and session recovery can read it without loading the full `idea-stage/IDEA_REPORT.md` (~200+ lines).
+This file is intentionally small so downstream skills and session recovery can read it without loading the full `idea-stage/IDEA_REPORT.md`.
 
 ## Output Protocols
 
@@ -331,23 +352,22 @@ This file is intentionally small (~30 lines) so downstream skills and session re
 ## Key Rules
 
 - **Large file handling**: If the Write tool fails due to file size, immediately retry using Bash (`cat << 'EOF' > file`) to write in chunks. Do NOT ask the user for permission — just do it silently.
-
-- **Don't skip phases.** Each phase filters and validates — skipping leads to wasted effort later.
-- **Checkpoint between phases.** Briefly summarize what was found before moving on.
-- **Kill ideas early.** It's better to kill 10 bad ideas in Phase 3 than to implement one and fail.
-- **Empirical signal > theoretical appeal.** An idea with a positive pilot outranks a "sounds great" idea without evidence.
-- **Document everything.** Dead ends are just as valuable as successes for future reference.
-- **Be honest with the reviewer.** Include negative results and failed pilots in the review prompt.
+- **Do not run MVP experiments during idea discovery.** This workflow is proposal-first, not pilot-first.
+- **Do not auto-choose the final proposal.** The shortlist-selection gate must wait for explicit user choice.
+- **Proposal quality outranks cheap executability.** Rank by novelty, technical depth, mechanism clarity, and paper-worthiness.
+- **Kill weak proposals early.** It is better to reject shallow proposals before implementation than to refine them into bigger but still weak plans.
+- **Document dead ends.** Eliminated proposals still save future time.
+- **Be honest with the reviewer.** Include the actual weaknesses, missing detail, and prior-work risks in the review prompt.
 - **Feishu notifications are optional.** If `~/.claude/feishu.json` exists, send `checkpoint` at each phase transition and `pipeline_done` at final report. If absent/off, skip silently.
 
 ## Composing with Workflow 2
 
-After this pipeline produces a validated top idea:
+After this pipeline produces a chosen/refined proposal plus experiment plan:
 
 ```
-/idea-discovery "direction"         ← you are here (Workflow 1, includes method refinement + experiment planning)
-/run-experiment                     ← deploy experiments from the plan
-/auto-review-loop "top idea"        ← Workflow 2: iterate until submission-ready
+/idea-discovery "direction"         ← you are here (Workflow 1)
+/run-experiment                     ← deploy experiments from the chosen plan
+/auto-review-loop "chosen idea"     ← Workflow 2: iterate after results arrive
 
 Or use /research-pipeline for the full end-to-end flow.
 ```

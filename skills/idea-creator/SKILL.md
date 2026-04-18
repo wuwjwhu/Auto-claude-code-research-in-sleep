@@ -1,29 +1,30 @@
 ---
 name: idea-creator
-description: Generate and rank research ideas given a broad direction. Use when user says "找idea", "brainstorm ideas", "generate research ideas", "what can we work on", or wants to explore a research area for publishable directions.
+description: Generate and rank research proposals given a broad direction. Use when user says "找idea", "brainstorm ideas", "generate research ideas", "what can we work on", or wants to explore a research area for publishable directions.
 argument-hint: [research-direction]
 allowed-tools: Bash(*), Read, Write, Grep, Glob, WebSearch, WebFetch, Agent
 ---
 
 # Research Idea Creator
 
-Generate publishable research ideas for: $ARGUMENTS
+Generate publishable research proposals for: $ARGUMENTS
 
 ## Overview
 
-Given a broad research direction from the user, systematically generate, validate, and rank concrete research ideas. This skill composes with `/research-lit`, `/novelty-check`, and `/research-review` to form a complete idea discovery pipeline.
+Given a broad research direction from the user, systematically generate, validate, and rank concrete research proposals. This skill composes with `/research-lit`, `/novelty-check`, and `/research-review` to form a complete idea discovery pipeline.
+
+The goal is **not** to pick whatever is easiest to pilot. The goal is to surface a small set of proposals that are:
+- well-motivated
+- mathematically or conceptually novel
+- technically deep
+- clearly differentiated from the closest prior work
+- strong enough to deserve later refinement into a paper-worthy method
 
 ## Constants
 
-- **PILOT_MAX_HOURS = 2** — Skip any pilot estimated to take > 2 hours per GPU. Flag as "needs manual pilot".
-- **PILOT_TIMEOUT_HOURS = 3** — Hard timeout: kill pilots exceeding 3 hours. Collect partial results if available.
-- **MAX_PILOT_IDEAS = 3** — Pilot at most 3 ideas in parallel. Additional ideas are validated on paper only.
-- **MAX_TOTAL_GPU_HOURS = 8** — Total GPU budget for all pilots combined.
 - **REVIEWER_MODEL = `gpt-5.4`** — Model used via `codex exec` for brainstorming and review. Must be an OpenAI model (e.g., `gpt-5.4`, `o3`, `gpt-4o`).
 - **REVIEWER_BACKEND = `codex`** — Default: `codex exec` (xhigh). Override with `— reviewer: oracle-pro` for GPT-5.4 Pro via Oracle MCP. See `shared-references/reviewer-routing.md`.
 - **OUTPUT_DIR = `idea-stage/`** — All idea-stage outputs go here. Create the directory if it doesn't exist.
-
-> 💡 Override via argument, e.g., `/idea-creator "topic" — pilot budget: 4h per idea, 20h total`.
 
 ## Workflow
 
@@ -74,13 +75,13 @@ If this skill is being called from `/idea-discovery`, treat the Phase 1 output f
    - Scaling regimes that haven't been explored
    - Diagnostic questions that nobody has asked
 
-### Phase 2: Idea Generation (brainstorm with external LLM)
+### Phase 2: Proposal Generation (brainstorm with external LLM)
 
 Use the external LLM via `codex exec` for divergent thinking:
 
 ```bash
 codex exec "$(cat <<'PROMPT'
-You are a senior ML researcher brainstorming research ideas.
+You are a senior ML researcher brainstorming top-tier research proposals.
 
 Research direction: [user's direction]
 
@@ -92,96 +93,80 @@ If the landscape came from `/research-lit` with prepared deep-research markdown,
 Key gaps identified:
 [paste gaps from Phase 1]
 
-Generate 8-12 concrete research ideas. For each idea:
-1. One-sentence summary
-2. Core hypothesis (what you expect to find and why)
-3. Minimum viable experiment (what's the cheapest way to test this?)
-4. Expected contribution type: empirical finding / new method / theoretical result / diagnostic
-5. Risk level: LOW (likely works) / MEDIUM (50-50) / HIGH (speculative)
-6. Estimated effort: days / weeks / months
+Generate 8-12 concrete research proposals. For each proposal, provide:
+1. One-sentence thesis
+2. Problem anchor: what bottleneck or gap does it really solve?
+3. Core technical mechanism
+4. Why it is mathematically, conceptually, or technically novel
+5. Closest prior work and the true delta
+6. Expected contribution type: new method / theoretical result / empirical finding / diagnostic
+7. Strongest reviewer objection
+8. Evidence that would eventually be needed to defend the claim
+9. Risk level: LOW / MEDIUM / HIGH
+10. Estimated effort: days / weeks / months
 
-Prioritize ideas that are:
-- Testable with moderate compute (8x RTX 3090 or less)
-- Likely to produce a clear positive OR negative result (both are publishable)
-- Not "apply X to Y" unless the application reveals genuinely surprising insights
-- Differentiated from the 10-15 papers above
+Prioritize proposals that are:
+- top-venue worthy if executed well
+- technically deep rather than superficially clever
+- not "apply X to Y" unless the application reveals a genuinely new mechanism or principle
+- differentiated from the strongest nearby prior work
+- feasible enough to pursue later, without letting cheap testability dominate the ranking
 
-Be creative but grounded. A great idea is one where the answer matters regardless of which way it goes.
+Be creative but grounded. A great proposal is one with a crisp mechanism-level thesis, a legible novelty story, and enough depth that a strong reviewer would care.
 PROMPT
 )" --skip-git-repo-check 2>&1
 ```
 
-Save the full raw review output for follow-up rounds.
+Save the full raw reviewer output for follow-up rounds.
 
 ### Phase 3: First-Pass Filtering
 
-For each generated idea, quickly evaluate:
+For each generated proposal, quickly evaluate:
 
-1. **Feasibility check**: Can we actually run this experiment with available resources?
-   - Compute requirements (estimate GPU-hours)
+1. **Novelty / differentiation**
+   - Is the mechanism genuinely different from the closest work?
+   - Is the proposal more than a renamed combination of familiar parts?
+
+2. **Technical depth**
+   - Is there a real mechanism, formulation, theorem, or principle?
+   - Would a reviewer see a substantive contribution rather than a thin tweak?
+
+3. **Paper-worthiness**
+   - If executed well, would this make a compelling top-tier paper?
+   - Does the answer matter regardless of whether the empirical outcome is strongly positive or mixed?
+
+4. **Feasibility check**
    - Data availability
    - Implementation complexity
-   - Skip ideas requiring > 1 week of GPU time or unavailable datasets
+   - Whether the proposal is actionable under realistic resources
+   - Feasibility is a constraint, not the primary ranker
 
-2. **Novelty quick-check**: For each idea, do 2-3 targeted searches to see if it's already been done. Full `/novelty-check` comes later for survivors.
+5. **Evidence hygiene**
+   - If a claim came only from prepared report prose and not from current literature verification, treat it as a brainstorming seed, not as proof of novelty or importance.
 
-3. **Impact estimation**: Would a reviewer care about the result?
-   - "So what?" test: if the experiment succeeds, does it change how people think?
-   - Is the finding actionable or just interesting?
+Eliminate proposals that fail any of these. Typically 8-12 proposals reduce to 3-5.
 
-4. **Evidence hygiene**: If a claim came only from prepared report prose and not from current literature verification, treat it as a brainstorming seed, not as proof of novelty or importance.
+### Phase 4: Deep Validation (for top proposals)
 
-Eliminate ideas that fail any of these. Typically 8-12 ideas reduce to 4-6.
+For each surviving proposal, run a deeper evaluation:
 
-### Phase 4: Deep Validation (for top ideas)
-
-For each surviving idea, run a deeper evaluation:
-
-1. **Novelty check**: Use the `/novelty-check` workflow (multi-source search + GPT-5.4 cross-verification) for each idea
+1. **Novelty check**: Use the `/novelty-check` workflow (multi-source search + GPT-5.4 cross-verification) for each proposal.
 
 2. **Critical review**: Use GPT-5.4 via `codex exec` (same thread):
    ```
-   Here are our top ideas after filtering:
-   [paste surviving ideas with novelty check results]
+   Here are our top proposals after filtering:
+   [paste surviving proposals with novelty check results]
 
    For each, play devil's advocate:
    - What's the strongest objection a reviewer would raise?
-   - What's the most likely failure mode?
+   - Where is the mechanism still underspecified?
    - How would you rank these for a top venue submission?
-   - Which 2-3 would you actually work on?
+   - Which 2-3 would you actually keep as a final shortlist?
    ```
 
-3. **Combine rankings**: Merge your assessment with GPT-5.4's ranking. Select top 2-3 ideas for pilot experiments.
+3. **Combine rankings**: Merge your assessment with GPT-5.4's ranking. Select the top 2-3 proposals for the final shortlist.
 
-### Phase 5: Parallel Pilot Experiments (for top 2-3 ideas)
-
-Before committing to a full research effort, run cheap pilot experiments to get empirical signal. This is the key differentiator from paper-only validation.
-
-1. **Design pilots**: For each top idea, define the minimal experiment that would give a positive or negative signal:
-   - Single seed, small scale (e.g., small dataset subset, fewer epochs)
-   - Target: 30 min - PILOT_MAX_HOURS per pilot on 1 GPU
-   - **Estimate GPU-hours BEFORE launching.** If estimated time > PILOT_MAX_HOURS, reduce scale (fewer epochs, smaller subset) or flag as "needs manual pilot"
-   - Clear success metric defined upfront (e.g., "if metric improves by > 1%, signal is positive")
-
-2. **Deploy in parallel**: Use `/run-experiment` to launch pilots on different GPUs simultaneously:
-   ```
-   GPU 0: Pilot for Idea 1
-   GPU 1: Pilot for Idea 2
-   GPU 2: Pilot for Idea 3
-   ```
-   Use `run_in_background: true` to launch all at once.
-
-3. **Collect results**: Use `/monitor-experiment` to check progress. If any pilot exceeds PILOT_TIMEOUT_HOURS, kill it and collect partial results. Once all pilots complete (or timeout), compare:
-   - Which ideas showed positive signal?
-   - Which showed null/negative results? (eliminate or deprioritize)
-   - Any surprising findings that suggest a pivot?
-   - Total GPU-hours consumed (track against MAX_TOTAL_GPU_HOURS budget)
-
-4. **Re-rank based on empirical evidence**: Update the idea ranking using pilot results. An idea with strong pilot signal jumps ahead of a theoretically appealing but untested idea.
-
-Note: Skip this phase if the ideas are purely theoretical or if no GPU is available. Flag skipped ideas as "needs pilot validation" in the report.
-
-### Phase 6: Output — Ranked Idea Report
+### Phase 5: Output — Ranked Proposal Report
 
 Write a structured report to `idea-stage/IDEA_REPORT.md`:
 
@@ -190,53 +175,43 @@ Write a structured report to `idea-stage/IDEA_REPORT.md`:
 
 **Direction**: [user's research direction]
 **Generated**: [date]
-**Ideas evaluated**: X generated → Y survived filtering → Z piloted → W recommended
+**Proposals evaluated**: X generated → Y survived filtering → Z shortlisted
 
 ## Landscape Summary
 [3-5 paragraphs on the current state of the field]
 
-## Recommended Ideas (ranked)
+## Ranked Proposal Shortlist
 
-### Idea 1: [title]
-- **Hypothesis**: [one sentence]
-- **Minimum experiment**: [concrete description]
-- **Expected outcome**: [what success/failure looks like]
-- **Novelty**: X/10 — closest work: [paper]
-- **Feasibility**: [compute, data, implementation estimates]
+### Proposal 1: [title]
+- **Thesis**: [one sentence]
+- **Problem anchor**: [what bottleneck it addresses]
+- **Core mechanism**: [technical summary]
+- **Novelty**: X/10 — closest work: [paper] — true delta: [difference]
+- **Technical depth**: [why it is not shallow]
+- **Feasibility**: [data / implementation / resource notes]
 - **Risk**: LOW/MEDIUM/HIGH
-- **Contribution type**: empirical / method / theory / diagnostic
-- **Pilot result**: [POSITIVE: metric +X% / NEGATIVE: no signal / SKIPPED: needs GPU]
+- **Contribution type**: method / theory / empirical finding / diagnostic
 - **Reviewer's likely objection**: [strongest counterargument]
-- **Why we should do this**: [1-2 sentences]
+- **Evidence later needed**: [what would need to be shown eventually]
+- **Why we should keep it**: [1-2 sentences]
 
-### Idea 2: [title]
+### Proposal 2: [title]
 ...
 
-## Eliminated Ideas (for reference)
-| Idea | Reason eliminated |
-|------|-------------------|
+## Eliminated Proposals (for reference)
+| Proposal | Reason eliminated |
+|----------|-------------------|
 | ... | Already done by [paper] |
-| ... | Requires > 1 week GPU time |
-| ... | Result wouldn't be interesting either way |
+| ... | Too shallow / weak mechanism |
+| ... | Interesting but not paper-worthy |
 
-## Pilot Experiment Results
-| Idea | GPU | Time | Key Metric | Signal |
-|------|-----|------|------------|--------|
-| Idea 1 | GPU 0 | 45 min | +2.3% CE | POSITIVE |
-| Idea 2 | GPU 1 | 30 min | -0.1% CE | NEGATIVE |
-| Idea 3 | GPU 2 | 1.5 hr | +0.8% CE | WEAK POSITIVE |
-
-## Suggested Execution Order
-1. Start with Idea 1 (positive pilot signal, lowest risk)
-2. Idea 3 as backup (weak signal, may need larger scale to confirm)
-3. Idea 2 eliminated by pilot — negative result documented
-
-## Next Steps
-- [ ] Scale up Idea 1 to full experiment (multi-seed, full dataset)
-- [ ] If confirmed, invoke /auto-review-loop for full iteration
+## Suggested Next Step
+- Present the shortlist to the user
+- Run `/novelty-check` and `/research-review` on the shortlisted proposals if not already done
+- Ask the user to choose one proposal for refinement
 ```
 
-## Phase 7: Write Ideas to Research Wiki (if active)
+### Phase 6: Write Ideas to Research Wiki (if active)
 
 **Skip this phase entirely if `research-wiki/` does not exist.**
 
@@ -244,15 +219,14 @@ This is critical for spiral learning — without it, `ideas/` stays empty and re
 
 ```
 if research-wiki/ exists:
-    for each idea in recommended_ideas + eliminated_ideas:
+    for each proposal in shortlisted_proposals + eliminated_proposals:
         1. Create page: research-wiki/ideas/<idea_id>.md
            - node_id: idea:<id>
-           - stage: proposed (or: piloted, archived)
-           - outcome: unknown (or: negative, mixed, positive)
+           - stage: proposed (or: archived)
+           - outcome: unknown
            - based_on: [paper:<slug>, ...]
            - target_gaps: [gap:<id>, ...]
-           - Include: hypothesis, proposed method, expected outcome
-           - If pilot was run: actual outcome, failure notes, reusable components
+           - Include: thesis, problem anchor, proposed mechanism, expected contribution
 
         2. Add edges:
            python3 tools/research_wiki.py add_edge research-wiki/ --from "idea:<id>" --to "paper:<slug>" --type inspired_by --evidence "..."
@@ -261,7 +235,7 @@ if research-wiki/ exists:
     Rebuild query pack:
         python3 tools/research_wiki.py rebuild_query_pack research-wiki/
     Log:
-        python3 tools/research_wiki.py log research-wiki/ "idea-creator wrote N ideas (M recommended, K eliminated)"
+        python3 tools/research_wiki.py log research-wiki/ "idea-creator wrote N proposals (M shortlisted, K eliminated)"
 ```
 
 ## Output Protocols
@@ -274,26 +248,22 @@ if research-wiki/ exists:
 ## Key Rules
 
 - **Large file handling**: If the Write tool fails due to file size, immediately retry using Bash (`cat << 'EOF' > file`) to write in chunks. Do NOT ask the user for permission — just do it silently.
-
-- The user provides a DIRECTION, not an idea. Your job is to generate the ideas.
+- The user provides a DIRECTION, not an idea. Your job is to generate the proposals.
 - Quantity first, quality second: brainstorm broadly, then filter ruthlessly.
-- A good negative result is just as publishable as a positive one. Prioritize ideas where the answer matters regardless of direction.
-- Don't fall in love with any idea before validating it. Be willing to kill ideas.
-- Always estimate compute cost. An idea that needs 1000 GPU-hours is not actionable for most researchers.
+- Do not rank proposals by how cheaply they can be piloted. Rank them by novelty, depth, mechanism clarity, and paper-worthiness.
 - "Apply X to Y" is the lowest form of research idea. Push for deeper questions.
-- Include eliminated ideas in the report — they save future time by documenting dead ends.
-- **If the user's direction is too broad (e.g., "NLP", "computer vision", "reinforcement learning"), STOP and ask them to narrow it.** A good direction is 1-2 sentences specifying the problem, domain, and constraint — e.g., "factorized gap in discrete diffusion LMs" or "sample efficiency of offline RL with image observations". Without sufficient specificity, generated ideas will be too vague to run experiments on.
+- Include eliminated proposals in the report — they save future time by documenting dead ends.
+- **If the user's direction is too broad (e.g., "NLP", "computer vision", "reinforcement learning"), STOP and ask them to narrow it.** A good direction is 1-2 sentences specifying the problem, domain, and constraint.
 
 ## Composing with Other Skills
 
-After this skill produces the ranked report:
+After this skill produces the ranked shortlist:
 ```
-/idea-creator "direction"     → ranked ideas
-/novelty-check "top idea"     → deep novelty verification (already done in Phase 4, but user can re-run)
-/research-review "top idea"   → external critical feedback
-implement                     → write code
-/run-experiment               → deploy to GPU
-/auto-review-loop             → iterate until submission-ready
+/idea-creator "direction"     → ranked proposal shortlist
+/novelty-check "top proposal" → deep novelty verification
+/research-review "top proposal" → external critical feedback
+/research-refine              → refine the chosen proposal
+/experiment-plan              → generate the final experiment roadmap after proposal selection
 ```
 
 ## Review Tracing

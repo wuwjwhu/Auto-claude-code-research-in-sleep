@@ -13,19 +13,19 @@ Research topic: $ARGUMENTS
 
 
 - **REVIEWER_BACKEND = `codex`** — Default: `codex exec` (xhigh). Override with `— reviewer: oracle-pro` for GPT-5.4 Pro via Oracle MCP. See `shared-references/reviewer-routing.md`.
-- **PAPER_LIBRARY** — Local directory containing user's paper collection (PDFs). Check these paths in order:
+- **PAPER_LIBRARY** — Local directory containing the user's paper collection and extracted source trees. Check these paths in order:
   1. `papers/` in the current project directory
   2. `literature/` in the current project directory
   3. Custom path specified by user in `CLAUDE.md` under `## Paper Library`
 - **PREPARED_REPORT_DIR = `deep-research/`** — Preferred directory for prewritten deep research markdown reports generated outside this workflow.
 - **MAX_PREPARED_REPORTS = 2** — In `— report: auto` mode, read at most the top 1-2 most relevant reports to avoid context bloat.
-- **MAX_LOCAL_PAPERS = 20** — Maximum number of local PDFs to scan (read first 3 pages each). If more are found, prioritize by filename relevance to the topic.
-- **ARXIV_DOWNLOAD = false** — When `true`, download top 3-5 most relevant arXiv PDFs to PAPER_LIBRARY after search. When `false` (default), only fetch metadata (title, abstract, authors) via arXiv API — no files are downloaded.
-- **ARXIV_MAX_DOWNLOAD = 5** — Maximum number of PDFs to download when `ARXIV_DOWNLOAD = true`.
+- **MAX_LOCAL_PAPERS = 20** — Maximum number of local paper bundles to scan. Prefer extracted `.tex` source when available; fall back to PDFs.
+- **ARXIV_DOWNLOAD = true** — By default, download top 3-5 most relevant arXiv reading artifacts to PAPER_LIBRARY after search: PDF plus source archive and extracted source tree when available.
+- **ARXIV_MAX_DOWNLOAD = 5** — Maximum number of arXiv papers to download when `ARXIV_DOWNLOAD = true`.
 
 > 💡 Overrides:
-> - `/research-lit "topic" — paper library: ~/my_papers/` — custom local PDF path
-> - `/research-lit "topic" — sources: zotero, local` — only search Zotero + local PDFs
+> - `/research-lit "topic" — paper library: ~/my_papers/` — custom local paper path
+> - `/research-lit "topic" — sources: zotero, local` — only search Zotero + local paper bundles
 > - `/research-lit "topic" — sources: zotero` — only search Zotero
 > - `/research-lit "topic" — sources: web` — only search the web (skip all local)
 > - `/research-lit "topic" — sources: web, semantic-scholar` — also search Semantic Scholar for published venue papers (IEEE, ACM, etc.)
@@ -34,8 +34,8 @@ Research topic: $ARGUMENTS
 > - `/research-lit "topic" — report: auto` — auto-detect the most relevant prepared markdown reports under `deep-research/` (default)
 > - `/research-lit "topic" — report: none` — skip prepared markdown reports entirely
 > - `/research-lit "topic" — report: deep-research/deep-research-report.md` — pin one prepared report explicitly
-> - `/research-lit "topic" — arxiv download: true` — download top relevant arXiv PDFs
-> - `/research-lit "topic" — arxiv download: true, max download: 10` — download up to 10 PDFs
+> - `/research-lit "topic" — arxiv download: false` — disable artifact download and use metadata only
+> - `/research-lit "topic" — arxiv download: true, max download: 10` — download up to 10 arXiv paper bundles
 
 ## Data Sources
 
@@ -49,11 +49,11 @@ Parse `$ARGUMENTS` for a `— sources:` directive:
 
 Examples:
 ```
-/research-lit "diffusion models"                                    → all (default, no S2)
-/research-lit "diffusion models" — sources: all                     → all (default, no S2)
+/research-lit "diffusion models"                                    → all (default, source-first local reading)
+/research-lit "diffusion models" — sources: all                     → all (default, source-first local reading)
 /research-lit "diffusion models" — sources: zotero                  → Zotero only
 /research-lit "diffusion models" — sources: zotero, web             → Zotero + web
-/research-lit "diffusion models" — sources: local                   → local PDFs only
+/research-lit "diffusion models" — sources: local                   → local paper bundles only
 /research-lit "topic" — sources: obsidian, local, web               → skip Zotero
 /research-lit "topic" — sources: web, semantic-scholar              → web + S2 API (IEEE/ACM venue papers)
 /research-lit "topic" — sources: deepxiv                            → DeepXiv only
@@ -70,13 +70,13 @@ Examples:
 | 1 | **Zotero** (via MCP) | `zotero` | Try calling any `mcp__zotero__*` tool — if unavailable, skip | Collections, tags, annotations, PDF highlights, BibTeX, semantic search |
 | 2 | **Obsidian** (via MCP) | `obsidian` | Try calling any `mcp__obsidian-vault__*` tool — if unavailable, skip | Research notes, paper summaries, tagged references, wikilinks |
 | 3 | **Prepared markdown reports** | `report` | `Glob: deep-research/*.md` or explicit `— report: <path>` | Precomputed deep research synthesis: framing, theme clusters, gap statements, benchmarks, open questions |
-| 4 | **Local PDFs** | `local` | `Glob: papers/**/*.pdf, literature/**/*.pdf` | Raw PDF content (first 3 pages) |
+| 4 | **Local paper bundles** | `local` | `Glob: papers/**/*.pdf, papers/**/*.src.tar.gz, papers/**/*.tex, literature/**/*.pdf, literature/**/*.src.tar.gz, literature/**/*.tex` | Extracted LaTeX source when available, otherwise source archive / PDF fallback |
 | 5 | **Web search** | `web` | Always available (WebSearch) | arXiv, Semantic Scholar, Google Scholar |
 | 6 | **Semantic Scholar API** | `semantic-scholar` | `tools/semantic_scholar_fetch.py` exists | Published venue papers (IEEE, ACM, Springer) with structured metadata: citation counts, venue info, TLDR. **Only runs when explicitly requested** via `— sources: semantic-scholar` or `— sources: web, semantic-scholar` |
 | 7 | **DeepXiv CLI** | `deepxiv` | `tools/deepxiv_fetch.py` and installed `deepxiv` CLI | Progressive paper retrieval: search, brief, head, section, trending, web search. **Only runs when explicitly requested** via `— sources: deepxiv` or `— sources: all, deepxiv` |
 | 8 | **Exa Search** | `exa` | `tools/exa_search.py` and installed `exa-py` SDK | AI-powered broad web search with content extraction (highlights, text, summaries). Covers blogs, docs, news, companies, and research papers beyond arXiv/S2. **Only runs when explicitly requested** via `— sources: exa` or `— sources: all, exa` |
 
-> **Graceful degradation**: If no MCP servers are configured, the skill works exactly as before (local PDFs + web search). Zotero and Obsidian are pure additions.
+> **Graceful degradation**: If no MCP servers are configured, the skill works exactly as before (local paper bundles + web search). Zotero and Obsidian are pure additions.
 
 ## Workflow
 
@@ -147,25 +147,152 @@ Summarize this into a compact "prepared report synthesis" section that feeds the
 
 ### Step 0d: Scan Local Paper Library
 
-Before searching online, check if the user already has relevant papers locally:
+Before searching online, check if the user already has relevant papers locally.
 
-1. **Locate library**: Check PAPER_LIBRARY paths for PDF files
+1. **Locate library**: Check PAPER_LIBRARY paths for paper bundles
    ```
-   Glob: papers/**/*.pdf, literature/**/*.pdf
+   Glob: papers/**/*.pdf, papers/**/*.src.tar.gz, papers/**/*.tex, literature/**/*.pdf, literature/**/*.src.tar.gz, literature/**/*.tex
    ```
 
-2. **De-duplicate against Zotero and prepared reports**: If Step 0a or Step 0c already surfaced a paper, skip duplicated local PDFs when possible (match by filename or title).
+2. **Resolve one bundle per paper**:
+   - Prefer extracted `.tex` source trees when available
+   - Otherwise use source archives if present but not yet extracted
+   - Otherwise use PDFs
+   - Avoid treating `paper.pdf` and `paper.src/main.tex` as separate papers
 
-3. **Filter by relevance**: Match filenames and first-page content against the research topic. Skip clearly unrelated papers.
+3. **De-duplicate against Zotero and prepared reports**: If Step 0a or Step 0c already surfaced a paper, skip duplicated local bundles when possible (match by filename or title).
 
-4. **Summarize relevant papers**: For each relevant local PDF (up to MAX_LOCAL_PAPERS):
-   - Read first 3 pages (title, abstract, intro)
-   - Extract: title, authors, year, core contribution, relevance to topic
-   - Flag papers that are directly related vs tangentially related
+4. **Filter by relevance**: Match filenames and available title/abstract text against the research topic. Skip clearly unrelated papers.
 
-5. **Build local knowledge base**: Compile summaries into a "papers you already have" section. This becomes the starting point — external search fills the gaps.
+5. **Digest relevant local bundles via a sub-agent contract**: For each relevant local bundle (up to MAX_LOCAL_PAPERS), do **not** read raw `.tex` directly into the main context by default. Instead, delegate bounded source digestion to a sub-agent and only keep the returned structured digest.
 
-> 📚 If no local papers are found, skip to Step 1. If the user has a comprehensive local collection, the external search can be more targeted (focus on what's missing).
+   ### Mode A — `broad_sweep`
+   Use this as the default local-bundle read mode.
+
+   Purpose:
+   - recover title / abstract / introduction-level understanding
+   - classify the paper as `direct | adjacent | tangential | unclear`
+   - decide whether the paper deserves deeper inspection
+
+   Read rules for the sub-agent:
+   - identify the likely main `.tex` using this heuristic order:
+     1. file containing `\documentclass` and `\begin{document}`
+     2. file containing `\title{` or `\begin{abstract}`
+     3. `main.tex`
+     4. largest top-level `.tex`
+   - inspect `\input{}` / `\include{}` only as needed to recover title / abstract / introduction
+   - do **not** read method, experiments, appendix, or the whole source tree by default
+   - if no readable source exists, fall back to the first 3 pages of the PDF
+   - return **only** the schema below; no long quotes, no raw LaTeX, no general commentary
+
+   Required output schema:
+   ```yaml
+   mode: broad_sweep
+   paper_id: "..."
+   bundle_path: "..."
+   artifact_used: "tex_source | pdf | metadata_only"
+   confidence: "high | medium | low"
+   bibliography:
+     title: "..."
+     authors: ["..."]
+     year: "..."
+     venue: "..."
+   source_coverage:
+     main_tex_found: true
+     main_tex_path: "..."
+     sections_inspected: ["title", "abstract", "introduction"]
+     extra_files_opened: ["..."]
+   digest:
+     problem: "..."
+     method: "..."
+     results: "..."
+     relevance: "..."
+     relation_label: "direct | adjacent | tangential | unclear"
+   signals:
+     why_relevant: ["..."]
+     notable_entities:
+       datasets: ["..."]
+       baselines: ["..."]
+       tasks: ["..."]
+   recommended_next_action:
+     action: "stop | deep_read"
+     reason: "..."
+   evidence_notes: ["..."]
+   failure_mode: "none | missing_main_tex | unreadable_source | insufficient_intro | pdf_fallback_used"
+   ```
+
+   ### Mode B — `deep_read`
+   Escalate only for closest prior work or when stronger method/results detail is needed.
+
+   Escalation triggers:
+   - `relation_label == direct`
+   - or `recommended_next_action.action == deep_read`
+   - or Step 2 still needs concrete method/results detail for novelty differentiation
+
+   Read rules for the sub-agent:
+   - read abstract, introduction, method, and experiments only
+   - follow `\input{}` / `\include{}` selectively for those sections
+   - do **not** read the full source tree
+   - do **not** read appendix unless critical evaluation evidence is missing from the main sections
+   - if source is unreadable or incomplete, fall back to PDF selectively
+   - return concise paraphrases only; no raw LaTeX and no adversarial review framing
+
+   Required output schema:
+   ```yaml
+   mode: deep_read
+   paper_id: "..."
+   bundle_path: "..."
+   artifact_used: "tex_source | pdf | metadata_only"
+   confidence: "high | medium | low"
+   bibliography:
+     title: "..."
+     authors: ["..."]
+     year: "..."
+     venue: "..."
+   source_coverage:
+     main_tex_found: true
+     main_tex_path: "..."
+     sections_requested: ["abstract", "introduction", "method", "experiments"]
+     sections_inspected: ["..."]
+     extra_files_opened: ["..."]
+     appendix_inspected: false
+   normalized_digest:
+     problem: "..."
+     method: "..."
+     results: "..."
+     relevance: "..."
+     source: "local"
+     artifact: "tex_source | pdf | metadata_only"
+   closest_prior_work_assessment:
+     central_claim: "..."
+     technical_core: ["..."]
+     experiment_scope:
+       tasks: ["..."]
+       datasets: ["..."]
+       metrics: ["..."]
+       baselines: ["..."]
+     strongest_result:
+       claim: "..."
+       evidence: "..."
+     limitations_or_boundaries: ["..."]
+   differentiation_hooks:
+     likely_overlap_axes: ["..."]
+     likely_non_overlap_axes: ["..."]
+     followup_questions: ["..."]
+   evidence_notes:
+     abstract_intro_basis: ["..."]
+     method_basis: ["..."]
+     experiment_basis: ["..."]
+   read_completeness:
+     sufficient_for_related_work: true
+     sufficient_for_novelty_differentiation: true
+     missing_for_full_understanding: ["..."]
+   failure_mode: "none | missing_method_section | missing_experiments_section | unreadable_source | pdf_fallback_used"
+   ```
+
+6. **Build local knowledge base**: Compile the returned digests into a "papers you already have" section. Use `broad_sweep` as the default and only promote a small number of direct papers to `deep_read`.
+
+> 📚 Prefer source-first reading because PDF text extraction often pollutes context with broken lines, headers, and damaged math. Keep raw `.tex` out of the main context whenever possible; retain only the digest returned by the sub-agent.
 
 ### Step 1: Search (external)
 - Use WebSearch to find recent papers on the topic
@@ -174,7 +301,7 @@ Before searching online, check if the user already has relevant papers locally:
 - **De-duplicate**: Skip papers already found in Zotero, Obsidian, prepared reports, or local library
 - **Verify freshness**: treat prepared reports as a strong starting point, then explicitly confirm whether newer competing work, changed terminology, or better benchmark evidence has appeared since those reports were written
 
-**arXiv API search** (always runs, no download by default):
+**arXiv API search** (always runs):
 
 Locate the fetch script and search arXiv directly:
 ```bash
@@ -193,86 +320,22 @@ The arXiv API returns structured metadata (title, abstract, full author list, ca
 
 **Semantic Scholar API search** (only when `semantic-scholar` is in sources):
 
-When the user explicitly requests `— sources: semantic-scholar` (or `— sources: web, semantic-scholar`), search for published venue papers beyond arXiv:
+When the user explicitly requests `— sources: semantic-scholar` (or `— sources: web, semantic-scholar`), search for published venue papers beyond arXiv.
 
-```bash
-S2_SCRIPT=$(find tools/ -name "semantic_scholar_fetch.py" 2>/dev/null | head -1)
-[ -z "$S2_SCRIPT" ] && S2_SCRIPT=$(find ~/.claude/skills/semantic-scholar/ -name "semantic_scholar_fetch.py" 2>/dev/null | head -1)
+**DeepXiv search** (only when `deepxiv` is in sources)** and **Exa search** (only when `exa` is in sources)** remain unchanged from the current workflow.
 
-# Search for published CS/Engineering papers with quality filters
-python3 "$S2_SCRIPT" search "QUERY" --max 10 \
-  --fields-of-study "Computer Science,Engineering" \
-  --publication-types "JournalArticle,Conference"
-```
-
-If `semantic_scholar_fetch.py` is not found, skip silently.
-
-**Why use Semantic Scholar?** Many IEEE/ACM journal papers are NOT on arXiv. S2 fills the gap for published venue-only papers with citation counts and venue metadata.
-
-**De-duplication between arXiv and S2**: Match by arXiv ID (S2 returns `externalIds.ArXiv`):
-- If a paper appears in both: check S2's `venue`/`publicationVenue` — if it has been published in a journal/conference (e.g. IEEE TWC, JSAC), use S2's metadata (venue, citationCount, DOI) as the authoritative version, since the published version supersedes the preprint. Keep the arXiv PDF link for download.
-- If the S2 match has no venue (still just a preprint indexed by S2): keep the arXiv version as-is.
-- S2 results without `externalIds.ArXiv` are **venue-only papers** not on arXiv — these are the unique value of this source.
-
-**DeepXiv search** (only when `deepxiv` is in sources):
-
-When the user explicitly requests `— sources: deepxiv` (or includes `deepxiv` in a combined source list), use the DeepXiv adapter for progressive retrieval:
-
-```bash
-python3 tools/deepxiv_fetch.py search "QUERY" --max 10
-```
-
-Then deepen only for the most relevant papers:
-
-```bash
-python3 tools/deepxiv_fetch.py paper-brief ARXIV_ID
-python3 tools/deepxiv_fetch.py paper-head ARXIV_ID
-python3 tools/deepxiv_fetch.py paper-section ARXIV_ID "Experiments"
-```
-
-If `tools/deepxiv_fetch.py` or the `deepxiv` CLI is unavailable, skip this source gracefully and continue with the remaining requested sources.
-
-**Why use DeepXiv?** It is useful when a broad search should be followed by staged reading rather than immediate full-paper loading. This reduces unnecessary context while still surfacing structure, TLDRs, and the most relevant sections.
-
-**De-duplication against arXiv and S2**:
-- Match by arXiv ID first, DOI second, normalized title third
-- If DeepXiv and arXiv refer to the same preprint, keep one canonical paper row and record `deepxiv` as an additional source
-- If DeepXiv overlaps with S2 on a published paper, prefer S2 venue/citation metadata in the final table, but keep DeepXiv-derived section notes when they add value
-
-**Exa search** (only when `exa` is in sources):
-
-When the user explicitly requests `— sources: exa` (or includes `exa` in a combined source list), use the Exa tool for broad AI-powered web search with content extraction:
-
-```bash
-EXA_SCRIPT=$(find tools/ -name "exa_search.py" 2>/dev/null | head -1)
-
-# Search for research papers with highlights
-python3 "$EXA_SCRIPT" search "QUERY" --max 10 --category "research paper" --content highlights
-
-# Search for broader web content (blogs, docs, news)
-python3 "$EXA_SCRIPT" search "QUERY" --max 10 --content highlights
-```
-
-If `tools/exa_search.py` or the `exa-py` SDK is unavailable, skip this source gracefully and continue with the remaining requested sources.
-
-**Why use Exa?** Exa provides AI-powered search across the broader web (blogs, documentation, news, company pages) with built-in content extraction. It fills a gap between academic databases (arXiv, S2) and generic WebSearch by returning richer content with each result.
-
-**De-duplication against arXiv, S2, and DeepXiv**:
-- Match by URL first, then normalized title
-- If Exa returns an arXiv paper already found by arXiv/S2, prefer the structured metadata from those sources
-- Exa results from non-academic domains (blogs, docs, news) are unique value not covered by other sources
-
-**Optional PDF download** (only when `ARXIV_DOWNLOAD = true`):
+**Optional arXiv artifact download** (default-on when `ARXIV_DOWNLOAD = true`):
 
 After all sources are searched and papers are ranked by relevance:
 ```bash
-# Download top N most relevant arXiv papers
+# Download top N most relevant arXiv paper bundles
 python3 "$SCRIPT" download ARXIV_ID --dir papers/
 ```
-- Only download papers ranked in the top ARXIV_MAX_DOWNLOAD by relevance
-- Skip papers already in the local library
+- Download top `ARXIV_MAX_DOWNLOAD` arXiv papers by relevance
+- Download PDF plus source archive / extracted tree when available
+- Skip artifacts already in the local library
 - 1-second delay between downloads (rate limiting)
-- Verify each PDF > 10 KB
+- Preserve partial success when source is unavailable but PDF succeeds
 
 ### Step 2: Analyze Each Paper
 For each relevant paper (from all sources), extract:
@@ -281,6 +344,17 @@ For each relevant paper (from all sources), extract:
 - **Results**: Key numbers/claims
 - **Relevance**: How does it relate to our work?
 - **Source**: Where we found it (Zotero/Obsidian/local/web) — helps user know what they already have vs what's new
+- **Reading artifact**: TeX source / PDF / metadata-only
+
+When the paper came from a local source bundle, Step 2 should consume the **normalized sub-agent digest** rather than re-reading raw `.tex` in the main workflow. Map the fields as follows:
+- `broad_sweep.digest.problem` or `deep_read.normalized_digest.problem` → **Problem**
+- `broad_sweep.digest.method` or `deep_read.normalized_digest.method` → **Method**
+- `broad_sweep.digest.results` or `deep_read.normalized_digest.results` → **Results**
+- `broad_sweep.digest.relevance` or `deep_read.normalized_digest.relevance` → **Relevance**
+- source origin remains **local**
+- artifact comes from `artifact_used` / `normalized_digest.artifact`
+
+Only re-open raw `.tex` or PDFs if the sub-agent explicitly reports insufficient evidence or low confidence.
 
 ### Step 3: Synthesize
 - Start with the prepared-report synthesis if Step 0c was used, then update it with current literature rather than rewriting from scratch
@@ -294,8 +368,8 @@ For each relevant paper (from all sources), extract:
 Present as a structured literature table:
 
 ```
-| Paper | Venue | Method | Key Result | Relevance to Us | Source |
-|-------|-------|--------|------------|-----------------|--------|
+| Paper | Venue | Method | Key Result | Relevance to Us | Source | Artifact |
+|-------|-------|--------|------------|-----------------|--------|----------|
 ```
 
 Plus a narrative summary of the landscape (3-5 paragraphs).
@@ -309,7 +383,7 @@ If prepared reports were used, add a short subsection before the final synthesis
 If Zotero BibTeX was exported, include a `references.bib` snippet for direct use in paper writing.
 
 ### Step 5: Save (if requested)
-- Save paper PDFs to `literature/` or `papers/`
+- Save paper bundles to `literature/` or `papers/`
 - Update related work notes in project memory
 - If Obsidian is available, optionally create a literature review note in the vault
 
@@ -338,7 +412,6 @@ else:
 ## Key Rules
 - Always include paper citations (authors, year, venue)
 - Distinguish between peer-reviewed and preprints
-- Be honest about limitations of each paper
-- Note if a paper directly competes with or supports our approach
-- **Never fail because a MCP server is not configured** — always fall back gracefully to the next data source
-- Zotero/Obsidian tools may have different names depending on how the user configured the MCP server (e.g., `mcp__zotero__search` or `mcp__zotero-mcp__search_items`). Try the most common patterns and adapt.
+- Prefer `.tex` source over PDF text when a readable extracted source tree exists
+- Fall back to PDFs cleanly when source is unavailable or unreadable
+- Never let source extraction failure block the full literature review

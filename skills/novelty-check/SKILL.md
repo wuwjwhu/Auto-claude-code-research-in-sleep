@@ -9,6 +9,8 @@ allowed-tools: WebSearch, WebFetch, Grep, Read, Glob
 
 Check whether a proposed method/idea has already been done in the literature: **$ARGUMENTS**
 
+This skill can be run on a **single proposal** or repeated across a **shortlist of proposals** during idea discovery.
+
 ## Constants
 
 - REVIEWER_MODEL = `gpt-5.4` — Model used via `codex exec`. Must be an OpenAI model (e.g., `gpt-5.4`, `o3`, `gpt-4o`)
@@ -24,6 +26,7 @@ Given a method description, systematically verify its novelty:
    - What problem does it solve?
    - What is the mechanism?
    - What makes it different from obvious baselines?
+3. If the proposal is mathematically or conceptually motivated, explicitly extract the mechanism-level novelty claims rather than checking only surface keywords.
 
 ### Phase B: Multi-Source Literature Search
 For EACH core claim, search using ALL available sources:
@@ -49,6 +52,7 @@ Prompt should include:
 - The proposed method description
 - All papers found in Phase B
 - Ask: "Is this method novel? What is the closest prior work? What is the delta?"
+- If relevant, also ask: "Is the mathematical or conceptual novelty real, or is this mostly a rephrasing of existing mechanisms?"
 
 ### Phase D: Novelty Report
 Output a structured report:
@@ -84,6 +88,7 @@ Output a structured report:
 - Check both the method AND the experimental setting for novelty
 - If the method is not novel but the FINDING would be, say so explicitly
 - Always check the most recent 6 months of arXiv — the field moves fast
+- When used on a shortlist, compare each proposal against the closest work on its own mechanism, not just against the other shortlisted proposals
 
 ## Review Tracing
 

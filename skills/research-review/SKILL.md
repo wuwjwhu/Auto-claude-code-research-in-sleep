@@ -33,48 +33,62 @@ Before calling the external reviewer, compile a comprehensive briefing:
 3. Identify: core claims, methodology, key results, known weaknesses
 
 ### Step 2: Initial Review (Round 1)
-Send a detailed prompt with xhigh reasoning:
+Send a detailed prompt with xhigh reasoning.
+
+For **proposal-shortlist review** (before experiment planning), ask the reviewer to focus on:
+1. Whether the proposal is mathematically / conceptually novel enough
+2. Whether the mechanism is technically deep rather than superficial
+3. Whether the proposal is clearly differentiated from the closest prior work
+4. What the strongest reviewer objection would be
+5. What evidence would later be needed to defend the proposal
+
+Example framing:
 
 ```bash
 codex exec "$(cat <<'PROMPT'
 [Full research context + specific questions]
-Please act as a senior ML reviewer (NeurIPS/ICML level). Identify:
+Please act as a senior ML reviewer (NeurIPS/ICML level). For this proposal, identify:
 1. Logical gaps or unjustified claims
-2. Missing experiments that would strengthen the story
-3. Narrative weaknesses
-4. Whether the contribution is sufficient for a top venue
+2. Whether the technical mechanism is deep enough to matter
+3. Whether the novelty story is legible relative to the closest work
+4. The strongest reviewer objection
+5. The minimum evidence that would eventually be needed to defend the claim
 Please be brutally honest.
 PROMPT
 )" --skip-git-repo-check 2>&1
 ```
 
+For **post-results review** (after experiments exist), you can still ask for missing experiments, narrative weaknesses, and contribution sufficiency.
+
 ### Step 3: Iterative Dialogue (Rounds 2-N)
-For follow-up rounds, run `codex exec` again and include the previous review plus your updates in the prompt:
+For follow-up rounds, run `codex exec` again and include the previous review plus your updates in the prompt.
 
 For each round:
 1. **Respond** to criticisms with evidence/counterarguments
 2. **Ask targeted follow-ups** on the most actionable points
-3. **Request specific deliverables**: experiment designs, paper outlines, claims matrices
+3. **Request specific deliverables** appropriate to the stage:
+   - pre-plan stage: tighter novelty positioning, mechanism clarifications, sharper objections, claim boundaries
+   - post-plan stage: experiment designs, paper outlines, claims matrices
 
 Key follow-up patterns:
 - "If we reframe X as Y, does that change your assessment?"
-- "What's the minimum experiment to satisfy concern Z?"
-- "Please design the minimal additional experiment package (highest acceptance lift per GPU week)"
+- "What's the strongest reason a reviewer would still reject this?"
+- "Which part of the mechanism still feels shallow or underspecified?"
+- "What is the minimum evidence this proposal would eventually need?"
 - "Please write a mock NeurIPS/ICML review with scores"
 - "Give me a results-to-claims matrix for possible experimental outcomes"
 
 ### Step 4: Convergence
-Stop iterating when:
-- Both sides agree on the core claims and their evidence requirements
-- A concrete experiment plan is established
-- The narrative structure is settled
+Stop iterating when one of these is true:
+- For proposal-stage review: the novelty story, technical mechanism, and reviewer-risk profile are clear enough for the user to compare proposals
+- For experiment-stage review: both sides agree on the core claims and their evidence requirements, a concrete experiment plan is established, or the narrative structure is settled
 
 ### Step 5: Document Everything
 Save the full interaction and conclusions to a review document in the project root:
 - Round-by-round summary of criticisms and responses
-- Final consensus on claims, narrative, and experiments
-- Claims matrix (what claims are allowed under each possible outcome)
-- Prioritized TODO list with estimated compute costs
+- Final consensus on claims, narrative, and experiments or evidence requirements
+- Claims matrix if discussed
+- Prioritized TODO list
 - Paper outline if discussed
 
 Update project memory/notes with key review conclusions.
@@ -85,14 +99,15 @@ Update project memory/notes with key review conclusions.
 - Send comprehensive context in Round 1 unless you explicitly want the model to inspect the repo itself
 - Be honest about weaknesses — hiding them leads to worse feedback
 - Push back on criticisms you disagree with, but accept valid ones
-- Focus on ACTIONABLE feedback — "what experiment would fix this?"
+- Focus on ACTIONABLE feedback
+- At proposal-shortlist stage, prioritize conceptual sharpness, technical depth, and novelty positioning before detailed experiment-package design
 - Save the raw review output you want to reuse in later rounds
 - The review document should be self-contained (readable without the conversation)
 
 ## Prompt Templates
 
-### For initial review:
-"I'm going to present a complete ML research project for your critical review. Please act as a senior ML reviewer (NeurIPS/ICML level)..."
+### For initial proposal review:
+"I'm going to present a research proposal for your critical review. Please act as a senior ML reviewer (NeurIPS/ICML level) and focus on novelty, mechanism quality, and likely reviewer objections."
 
 ### For experiment design:
 "Please design the minimal additional experiment package that gives the highest acceptance lift per GPU week. Our compute: [describe]. Be very specific about configurations."

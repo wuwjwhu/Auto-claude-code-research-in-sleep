@@ -11,7 +11,7 @@ End-to-end autonomous research workflow for: **$ARGUMENTS**
 
 ## Constants
 
-- **AUTO_PROCEED = true** — When `true`, Gate 1 auto-selects the top-ranked idea (highest pilot signal + novelty confirmed) and continues to implementation. When `false`, always waits for explicit user confirmation before proceeding.
+- **AUTO_PROCEED = false** — When `false` (default), always waits for explicit user confirmation before proceeding past Stage 1. Do not auto-select the final proposal. If the user explicitly overrides this, only auto-continue after the shortlist has been presented clearly.
 - **ARXIV_DOWNLOAD = false** — When `true`, `/research-lit` downloads the top relevant arXiv PDFs during literature survey. When `false` (default), only fetches metadata via arXiv API. Passed through to `/idea-discovery` → `/research-lit`.
 - **HUMAN_CHECKPOINT = false** — When `true`, the auto-review loops (Stage 4) pause after each round's review to let you see the score and provide custom modification instructions before fixes are implemented. When `false` (default), loops run fully autonomously. Passed through to `/auto-review-loop`.
 - **REVIEWER_DIFFICULTY = medium** — How adversarial the reviewer is. `medium` (default): standard `codex exec` review. `hard`: adds reviewer memory + debate protocol. `nightmare`: GPT reads repo directly via `codex exec` + memory + debate. Passed through to `/auto-review-loop`.
@@ -43,43 +43,42 @@ Invoke the idea discovery pipeline:
 /idea-discovery "$ARGUMENTS"
 ```
 
-This internally runs: `/research-lit` → `/idea-creator` → `/novelty-check` → `/research-review`
+This internally runs: `/research-lit` → `/idea-creator` → `/novelty-check` → `/research-review` → user choice → `/research-refine` → `/experiment-plan`
 
-**Output:** `idea-stage/IDEA_REPORT.md` with ranked, validated, pilot-tested ideas.
+**Output:** `idea-stage/IDEA_REPORT.md` with a ranked shortlist of hardened proposals, then `refine-logs/FINAL_PROPOSAL.md` and `refine-logs/EXPERIMENT_PLAN.md` for the chosen proposal.
 
 **🚦 Gate 1 — Human Checkpoint:**
 
-After `idea-stage/IDEA_REPORT.md` is generated, **pause and present the top ideas to the user**:
+After the shortlist is hardened and presented, **pause and present the top proposals to the user**:
 
 ```
-📋 Idea Discovery complete. Top ideas:
+📋 Idea Discovery complete. Top proposals:
 
-1. [Idea 1 title] — Pilot: POSITIVE (+X%), Novelty: CONFIRMED
-2. [Idea 2 title] — Pilot: WEAK POSITIVE (+Y%), Novelty: CONFIRMED
-3. [Idea 3 title] — Pilot: NEGATIVE, eliminated
+1. [Proposal 1 title] — Novelty: [summary], Technical depth: [summary]
+2. [Proposal 2 title] — Novelty: [summary], Technical depth: [summary]
+3. [Proposal 3 title] — Novelty: [summary], Technical depth: [summary]
 
-Recommended: Idea 1. Shall I proceed with implementation?
+Which proposal should I carry forward into the final refined proposal and experiment plan?
 ```
 
-**If AUTO_PROCEED=false:** Wait for user confirmation before continuing. The user may:
-- **Approve an idea** → proceed to Stage 2.
-- **Pick a different idea** → proceed with their choice.
-- **Request changes** (e.g., "combine Idea 1 and 3", "focus more on X") → update the idea prompt with user feedback, re-run `/idea-discovery` with refined constraints, and present again.
-- **Reject all ideas** → collect feedback on what's missing, re-run Stage 1 with adjusted research direction. Repeat until the user commits to an idea.
+**Default behavior:** wait for explicit user choice before continuing. The user may:
+- **Approve a proposal** → proceed to Stage 2.
+- **Pick a different proposal** → proceed with their choice.
+- **Request changes** (e.g., "focus more on X", "make the shortlist more theoretical") → update the idea prompt with user feedback, re-run `/idea-discovery` with refined constraints, and present again.
+- **Reject all proposals** → collect feedback on what's missing, re-run Stage 1 with adjusted research direction. Repeat until the user commits to a proposal.
 - **Stop here** → save current state to `idea-stage/IDEA_REPORT.md` for future reference.
 
-**If AUTO_PROCEED=true:** Present the top ideas, wait 10 seconds for user input. If no response, auto-select the #1 ranked idea (highest pilot signal + novelty confirmed) and proceed to Stage 2. Log: `"AUTO_PROCEED: selected Idea 1 — [title]"`.
-
-> ⚠️ **This gate waits for user confirmation when AUTO_PROCEED=false.** When `true`, it auto-selects the top idea after presenting results. The rest of the pipeline (Stages 2-4) is expensive (GPU time + multiple review rounds), so set `AUTO_PROCEED=false` if you want to manually choose which idea to pursue.
+If the user explicitly enables auto-proceed, only continue after clearly presenting the shortlist and chosen proposal. Do not silently auto-pick based on pilot signal because Workflow 1 is no longer pilot-first.
 
 ### Stage 2: Implementation
 
-Once the user confirms which idea to pursue:
+Once the user confirms which proposal to pursue:
 
-1. **Read the idea details** from `idea-stage/IDEA_REPORT.md` (hypothesis, experimental design, pilot code) *(fall back to `./IDEA_REPORT.md` if not found)*
+1. **Read the chosen proposal details** from `refine-logs/FINAL_PROPOSAL.md` and the validation context from `idea-stage/IDEA_REPORT.md`
 
-2. **Implement the full experiment**:
-   - Extend pilot code to full scale (multi-seed, full dataset, proper baselines)
+2. **Implement the full experiment program**:
+   - Implement the refined method described in `FINAL_PROPOSAL.md`
+   - Use `EXPERIMENT_PLAN.md` as the claim-driven validation roadmap
    - Add proper evaluation metrics and logging (wandb if configured)
    - Write clean, reproducible experiment scripts
    - Follow existing codebase conventions
@@ -117,7 +116,7 @@ Wait for experiments to complete. Collect results.
 Once initial results are in, start the autonomous improvement loop:
 
 ```
-/auto-review-loop "$ARGUMENTS — [chosen idea title], difficulty: $REVIEWER_DIFFICULTY"
+/auto-review-loop "$ARGUMENTS — [chosen proposal title], difficulty: $REVIEWER_DIFFICULTY"
 ```
 
 **What this does (up to 4 rounds):**
@@ -132,10 +131,11 @@ Once initial results are in, start the autonomous improvement loop:
 
 After the auto-review loop completes, prepare the handoff for paper writing.
 
-**Step 1:** Write a final research status report (same as before).
+**Step 1:** Write a final research status report.
 
 **Step 2:** Generate `NARRATIVE_REPORT.md` from:
-- `IDEA_REPORT.md` (chosen idea, hypothesis, novelty justification)
+- `IDEA_REPORT.md` (shortlist, novelty justification, why the chosen proposal won)
+- `FINAL_PROPOSAL.md` (the chosen/refined method)
 - Implementation details from the repo
 - Experiment configs and final results
 - `AUTO_REVIEW.md` (review history, weaknesses fixed, remaining limitations)
@@ -153,12 +153,12 @@ The narrative report must contain:
 # Research Pipeline Report
 
 **Direction**: $ARGUMENTS
-**Chosen Idea**: [title]
+**Chosen Proposal**: [title]
 **Date**: [start] → [end]
 **Pipeline**: idea-discovery → implement → run-experiment → auto-review-loop
 
 ## Journey Summary
-- Ideas generated: X → filtered to Y → piloted Z → chose 1
+- Proposals generated: X → filtered to Y → shortlisted Z → chose 1
 - Implementation: [brief description of what was built]
 - Experiments: [number of GPU experiments, total compute time]
 - Review rounds: N/4, final score: X/10
@@ -227,19 +227,18 @@ When Workflow 3 finishes, update the pipeline report with:
 ## Key Rules
 
 - **Large file handling**: If the Write tool fails due to file size, immediately retry using Bash (`cat << 'EOF' > file`) to write in chunks. Do NOT ask the user for permission — just do it silently.
-
-- **Human checkpoint after Stage 1 is controlled by AUTO_PROCEED.** When `false`, do not proceed without user confirmation. When `true`, auto-select the top idea after presenting results.
-- **Stages 2-4 can run autonomously** once the user confirms the idea. This is the "sleep and wake up to results" part.
+- **Human checkpoint after Stage 1 is user-choice gated.** Do not proceed without a chosen proposal unless the user explicitly requests autonomous continuation.
+- **Stages 2-4 can run autonomously** once the user confirms the chosen proposal. This is the "sleep and wake up to results" part.
 - **If Stage 4 ends at round 4 without positive assessment**, stop and report remaining issues. Do not loop forever.
 - **Budget awareness**: Track total GPU-hours across the pipeline. Flag if approaching user-defined limits.
 - **Documentation**: Every stage updates its own output file. The full history should be self-contained.
-- **Fail gracefully**: If any stage fails (no good ideas, experiments crash, review loop stuck), report clearly and suggest alternatives rather than forcing forward.
+- **Fail gracefully**: If any stage fails (no good proposals, experiments crash, review loop stuck), report clearly and suggest alternatives rather than forcing forward.
 
 ## Typical Timeline
 
 | Stage | Duration | Can sleep? |
 |-------|----------|------------|
-| 1. Idea Discovery | 30-60 min | Yes if AUTO_PROCEED=true |
+| 1. Idea Discovery | 30-60 min | Yes if the user approves shortlist-to-proposal flow |
 | 2. Implementation | 15-60 min | Yes (autonomous after Gate 1) |
 | 3. Deploy | 5 min + experiment time | Yes ✅ |
 | 4. Auto Review | 1-4 hours (depends on experiments) | Yes ✅ |
