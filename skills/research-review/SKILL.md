@@ -29,8 +29,9 @@ Get a multi-round critical review of research work from an external LLM with max
 ### Step 1: Gather Research Context
 Before calling the external reviewer, compile a comprehensive briefing:
 1. Read project narrative documents (e.g., STORY.md, README.md, paper drafts)
-2. Read any memory/notes files for key findings and experiment history
-3. Identify: core claims, methodology, key results, known weaknesses
+2. Read `papers/index.md` when available so proposal-stage review starts from the local prior-work map rather than rebuilding it ad hoc
+3. Read any memory/notes files for key findings and experiment history
+4. Identify: core claims, methodology, key results, known weaknesses
 
 ### Step 2: Initial Review (Round 1)
 Send a detailed prompt with xhigh reasoning.
@@ -41,6 +42,8 @@ For **proposal-shortlist review** (before experiment planning), ask the reviewer
 3. Whether the proposal is clearly differentiated from the closest prior work
 4. What the strongest reviewer objection would be
 5. What evidence would later be needed to defend the proposal
+
+When `papers/index.md` exists, use it to identify the 2-5 most important comparator papers first. If a comparator paper needs direct inspection, pass file paths to the primary artifacts and prefer `main_tex_path` over `pdf_path` whenever readable TeX exists.
 
 Example framing:
 
@@ -97,6 +100,7 @@ Update project memory/notes with key review conclusions.
 
 - ALWAYS run reviews with xhigh reasoning
 - Send comprehensive context in Round 1 unless you explicitly want the model to inspect the repo itself
+- For prior-work-sensitive proposal review, use `papers/index.md` to route the reviewer toward the strongest comparator papers, and pass file paths to those primary artifacts rather than relying on executor-written prior-work summaries
 - Be honest about weaknesses — hiding them leads to worse feedback
 - Push back on criticisms you disagree with, but accept valid ones
 - Focus on ACTIONABLE feedback

@@ -125,12 +125,16 @@ If `REPORT` was set explicitly, forward it into `/research-lit`. Otherwise rely 
 **What this does:**
 - Read prepared deep-research markdown first when available
 - Search arXiv, Google Scholar, Semantic Scholar for recent papers
+- Download top-ranked arXiv paper artifacts into `papers/` when `ARXIV_DOWNLOAD = true`: PDFs plus source archives / extracted source trees when available
 - Use `/research-lit`'s source-first local paper ingestion path when extracted `.tex` bundles are available
 - Delegate bounded `.tex` digestion to sub-agents that return compact digests rather than pulling raw source into the main context
 - Build and refresh `papers/index.md` so each ingested paper records its PDF path, main TeX path, and concise summary fields for later reuse
+- Complete the literature stage only after any newly downloaded/relevant bundles have been digested and the index is refreshed for downstream reuse
 - Build a landscape map: sub-directions, approaches, open problems
 - Identify structural gaps and recurring limitations
 - Output a normalized literature summary for later phases
+
+Before presenting this checkpoint, verify that the literature phase actually executed the required artifact-ingestion path when `ARXIV_DOWNLOAD = true`: there should either be newly materialized paper artifacts under `papers/` plus refreshed `papers/index.md`, or an explicit report that no relevant arXiv IDs were available / downloads were attempted but failed.
 
 **🚦 Checkpoint:** Present the landscape summary to the user. Ask:
 
@@ -143,6 +147,7 @@ Does this match your understanding? Should I adjust the scope before generating 
 
 - **User approves** → proceed to Phase 2 with best direction.
 - **User requests changes** (e.g., "focus more on X", "ignore Y", "too broad") → refine the search with updated queries, re-run `/research-lit` with adjusted scope, and present again.
+- **Artifact-ingestion check fails** → do not proceed. Go back to `/research-lit` and finish the required download + local-ingestion path first.
 
 ### Phase 2: Proposal Generation + Conceptual Filtering
 
@@ -184,6 +189,7 @@ For each shortlisted proposal, run a targeted novelty check:
 
 **What this does:**
 - Builds on the paper discovery and first-pass reading already done by `/research-lit`
+- Starts from `papers/index.md` when available to recover the local prior-work map plus each paper's `main_tex_path` / `pdf_path`
 - Runs proposal-specific freshness checks for the closest overlapping work
 - Cross-verifies with GPT-5.4 xhigh
 - Checks for concurrent work (last 3-6 months)
@@ -192,6 +198,7 @@ For each shortlisted proposal, run a targeted novelty check:
 **What this should not do by default:**
 - Re-run the broad literature sweep already done in Phase 1
 - Replace `research-lit` as the main paper download / source-reading stage
+- Ignore the paper index and jump straight to raw PDFs when `main_tex_path` or other indexed artifacts already exist
 
 **Update `idea-stage/IDEA_REPORT.md`** with deep novelty results. Eliminate any proposal whose core mechanism is already covered by existing work.
 
@@ -205,6 +212,8 @@ For the surviving shortlisted proposals, get brutal feedback:
 
 **What this does:**
 - GPT-5.4 xhigh acts as a senior reviewer (NeurIPS/ICML level)
+- Starts from `papers/index.md` when available so review is anchored to the local prior-work set before selectively reopening only the most critical comparator papers
+- Uses `main_tex_path` first and `pdf_path` second when a critical prior paper must be read directly
 - Scores conceptual sharpness, technical depth, mechanism clarity, and contribution quality
 - Identifies the strongest reviewer objections and missing technical detail
 - Specifies what evidence would later be required without forcing a full experiment plan yet

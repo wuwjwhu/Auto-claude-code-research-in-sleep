@@ -31,6 +31,8 @@ Given a method description, systematically verify its novelty:
 ### Phase B: Proposal-Specific Freshness and Overlap Check
 This skill is **not** the main literature-ingestion stage. By the time it runs inside `idea-discovery`, `/research-lit` should already have done the heavy lifting: broad paper discovery, artifact download, source-first first-pass reading, and shortlist construction.
 
+Before running freshness search, read `papers/index.md` when available and use it as the canonical local prior-work map for this proposal. Recover each candidate paper's `main_tex_path`, `pdf_path`, `brief_summary`, `problem`, `method`, `result`, and `takeaway` from the index instead of rebuilding the literature map from scratch.
+
 For EACH core claim, do only the narrower proposal-specific checks needed to stress-test novelty:
 
 1. **Freshness search** (via `WebSearch`):
@@ -42,10 +44,12 @@ For EACH core claim, do only the narrower proposal-specific checks needed to str
 
 2. **Closest-work confirmation**:
    - Check against the strongest nearby papers already surfaced by `/research-lit`
+   - Start from the closest candidates already indexed in `papers/index.md` when available
    - Add only the missing closest papers or fresher overlaps that matter for this proposal
 
 3. **Targeted reading only**:
    - Read abstracts, related work, or the most relevant sections of the closest papers
+   - For critical confirmation reads, prefer the indexed `main_tex_path`; fall back to the indexed `pdf_path` only when TeX is absent or unreadable
    - Do not re-run a broad literature sweep here unless the prior literature stage was clearly insufficient
 
 ### Phase C: Cross-Model Verification

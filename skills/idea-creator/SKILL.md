@@ -57,7 +57,7 @@ If this skill is being called from `/idea-discovery`, treat the Phase 1 output f
    - Use it to avoid reopening raw `.tex` or PDFs unless the index is missing a critical detail.
    - Treat the indexed papers as known prior work and as concrete mechanism seeds or anti-patterns for brainstorming.
 
-3. **Scan local paper library only when needed**: If `papers/index.md` is missing, stale, or insufficient, then check `papers/` and `literature/` in the project directory for existing PDFs/source bundles to fill gaps or validate missing details. Read first 3 pages of relevant papers only when the index or upstream synthesis cannot answer the question.
+3. **Scan local paper library only when needed**: If `papers/index.md` is missing, stale, or insufficient, then check `papers/` and `literature/` in the project directory for existing PDFs/source bundles to fill gaps or validate missing details. When a critical detail is missing and you must reopen a paper directly, prefer the indexed `main_tex_path` first and fall back to the indexed `pdf_path` only when TeX is absent or unreadable. Read first 3 PDF pages only when the index and any readable TeX source still cannot answer the question.
 
 4. **Search recent literature** using WebSearch when the upstream synthesis is missing, stale, or incomplete:
    - Top venues in the last 2 years (NeurIPS, ICML, ICLR, ACL, EMNLP, etc.)

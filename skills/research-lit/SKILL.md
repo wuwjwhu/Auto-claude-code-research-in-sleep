@@ -23,6 +23,19 @@ Research topic: $ARGUMENTS
 - **ARXIV_DOWNLOAD = true** — By default, download 10~20 most relevant arXiv reading artifacts to PAPER_LIBRARY after search: PDF plus source archive and extracted source tree when available.
 - **ARXIV_MAX_DOWNLOAD = 20** — Maximum number of arXiv papers to download when `ARXIV_DOWNLOAD = true`.
 
+## Non-Negotiable Execution Gate
+
+When `ARXIV_DOWNLOAD = true` and arXiv search returns relevant paper IDs, this skill is **not allowed** to finish in a search-only / metadata-only state.
+
+You must complete this full sequence before presenting the literature synthesis:
+1. run one or more `python3 "$SCRIPT" download ... --dir papers/` commands for the top-ranked arXiv papers,
+2. re-scan the augmented local paper library,
+3. digest the newly available bundles through the source-first sub-agent path,
+4. refresh `papers/index.md`,
+5. verify that `papers/` artifacts and `papers/index.md` now exist for the current run.
+
+If you only ran arXiv search / WebSearch and never executed the download commands, the run is incomplete. Go back and execute the download + local-ingestion stages before summarizing. The only valid exception is that no relevant arXiv papers were found or every download attempt failed despite being executed and reported.
+
 > 💡 Overrides:
 > - `/research-lit "topic" — paper library: ~/my_papers/` — custom local paper path
 > - `/research-lit "topic" — sources: zotero, local` — only search Zotero + local paper bundles
@@ -299,9 +312,11 @@ Before searching online, check if the user already has relevant papers locally.
 6. **Build local knowledge base**: Compile the returned digests into a "papers you already have" section. Use `broad_sweep` as the default and only promote a small number of direct papers to `deep_read`.
 
 7. **Write `papers/index.md`**: After local bundle digestion (and again after any new arXiv bundles are downloaded and digested), generate or refresh `papers/index.md` as a reusable paper-library index.
+   - Treat this as a required output of a successful source-ingestion pass whenever any relevant local or newly downloaded bundles were digested. Do not consider the literature-ingestion stage complete until the index has been refreshed.
    - Write one entry per resolved paper bundle, not one per artifact file.
    - Reuse the sub-agent outputs instead of rereading raw `.tex` in the main workflow.
    - Prefer project-relative paths.
+   - If `papers/index.md` already exists, update matching `paper_id` entries in place and append new papers; do not drop unrelated prior entries.
    - Required fields per paper:
      - `paper_id`
      - `title`
@@ -362,7 +377,13 @@ When the user explicitly requests `— sources: semantic-scholar` (or `— sourc
 
 **Required arXiv artifact download stage** (default-on when `ARXIV_DOWNLOAD = true`):
 
-After all sources are searched and papers are ranked by relevance:
+After all sources are searched and papers are ranked by relevance, the expected execution order is:
+1. download top-ranked arXiv bundles into `papers/`
+2. re-scan the augmented local paper library
+3. digest the newly available bundles through the same source-first sub-agent path
+4. refresh `papers/index.md`
+5. only then finalize the literature synthesis
+
 ```bash
 # Download top N most relevant arXiv paper bundles
 python3 "$SCRIPT" download ARXIV_ID --dir papers/
@@ -373,6 +394,9 @@ python3 "$SCRIPT" download ARXIV_ID --dir papers/
 - 1-second delay between downloads (rate limiting)
 - Preserve partial success when source is unavailable but PDF succeeds
 - After download, treat the new bundles as part of the same local paper library flow: run the same sub-agent digestion, capture `pdf_path` / `main_tex_path`, and refresh `papers/index.md`
+- Do not silently skip the re-scan / digestion / index-refresh portion when downloads succeed; later phases depend on those artifacts and index entries existing
+- Before Step 3, explicitly verify the outcome with `Glob` over `papers/**/*.pdf`, `papers/**/*.src.tar.gz`, `papers/**/*.tex` (or `literature/**` if that is the configured library) plus `Read papers/index.md` when the index should exist
+- If those verification checks fail after relevant arXiv hits were found and downloads were expected, treat the run as incomplete and continue the download / ingestion path instead of presenting a search-only synthesis
 - This stage is part of the intended default literature-ingestion flow, not an optional nice-to-have when `ARXIV_DOWNLOAD = true`
 - The purpose is to let `research-lit` own paper discovery plus first-pass reading from local artifacts before later proposal-specific novelty checks
 
@@ -396,6 +420,7 @@ When the paper came from a local source bundle, Step 2 should consume the **norm
 Only re-open raw `.tex` or PDFs if the sub-agent explicitly reports insufficient evidence or low confidence.
 
 ### Step 3: Synthesize
+Only begin this step after the local-bundle scan and any required arXiv download + re-digestion pass have completed and `papers/index.md` has been refreshed for the current run.
 - Start with the prepared-report synthesis if Step 0c was used, then update it with current literature rather than rewriting from scratch
 - Group papers by approach/theme
 - Identify consensus vs disagreements in the field
@@ -421,8 +446,8 @@ If prepared reports were used, add a short subsection before the final synthesis
 
 If Zotero BibTeX was exported, include a `references.bib` snippet for direct use in paper writing.
 
-### Step 5: Save (if requested)
-- Save paper bundles to `literature/` or `papers/`
+### Step 5: Persist local artifacts and index
+- The download stage itself should already save paper bundles into `papers/` (or the configured paper library) when `ARXIV_DOWNLOAD = true`; do not treat artifact persistence as optional after a successful download run
 - Save or refresh `papers/index.md` whenever local or downloaded bundles were analyzed
 - Append `papers/index.md` to `MANIFEST.md` using the shared output manifest protocol
 - Update related work notes in project memory
