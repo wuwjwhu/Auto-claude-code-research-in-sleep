@@ -18,7 +18,7 @@ This skill chains sub-skills into a staged pipeline:
   (survey)      (generate + rank)  (verify novelty)  (stress-test proposals) (hard stop)   (refine chosen)   (plan evidence)
 ```
 
-The goal is **not** to lock in a weak proposal early or to run MVP experiments before the idea is mature. The goal is to produce a small set of top-tier, well-motivated, mathematically novel, technically deep proposals, harden that shortlist with novelty and reviewer scrutiny, then **stop and wait for the user to choose one**. Only after one proposal is chosen should the workflow refine it into a final proposal and generate the experiment plan.
+The goal is **not** to lock in a weak proposal early or to run MVP experiments before the idea is mature. The goal is to produce a small set of top-tier, well-motivated, mathematically novel, technically deep proposals, harden that shortlist with novelty and reviewer scrutiny, then **stop and wait for the user to choose one**. Prefer the strongest top-tier contribution rather than the smallest intervention: compactness is a virtue only when it preserves or sharpens a theorem, formal object, provable property, or a genuinely reviewer-compelling mechanism-level insight. Only after one proposal is chosen should the workflow refine it into a final proposal and generate the experiment plan.
 
 Final deliverables:
 - `idea-stage/IDEA_REPORT.md` — ranked shortlist of hardened proposals
@@ -162,7 +162,8 @@ Invoke `/idea-creator` with the landscape context (and `idea-stage/REF_PAPER_SUM
 - Read `papers/index.md` first when available so brainstorming is anchored to the local paper library and its recorded PDF/main-TeX paths plus concise paper digests
 - If Phase 1 used prepared reports, rely on the normalized literature synthesis rather than rereading raw `deep-research/*.md`
 - Brainstorm 8-12 concrete proposals via GPT-5.4 xhigh
-- Filter by mathematical novelty, technical depth, mechanism clarity, differentiation from closest prior work, and paper-worthiness
+- Filter by problem importance, mathematical/formal substance, technical depth, mechanism clarity, differentiation from closest prior work, and paper-worthiness
+- Reject proposals that are merely clean/elegant without a theorem, formal object, provable claim, or comparably deep mechanism-level contribution
 - Reduce to a shortlist of 2-3 strong proposals
 - Output a proposal-first `idea-stage/IDEA_REPORT.md`
 
@@ -210,6 +211,8 @@ For the surviving shortlisted proposals, get brutal feedback:
 /research-review "[shortlisted proposal description + novelty findings]"
 ```
 
+**This phase requires an explicit `/research-review` execution.** Do not treat reviewer-style objections generated earlier inside `/idea-creator`, `/novelty-check`, or ad hoc analysis as a substitute for this step. The workflow is not ready for the shortlist checkpoint until `/research-review` has actually run on the surviving proposals.
+
 **What this does:**
 - GPT-5.4 xhigh acts as a senior reviewer (NeurIPS/ICML level)
 - Starts from `papers/index.md` when available so review is anchored to the local prior-work set before selectively reopening only the most critical comparator papers
@@ -222,6 +225,8 @@ For the surviving shortlisted proposals, get brutal feedback:
 
 ### Phase 4.5: Final Shortlist Checkpoint — User Choice Required
 
+Before presenting the shortlist, verify that Phase 4 actually ran as an explicit `/research-review` step for the surviving proposals and that `idea-stage/IDEA_REPORT.md` has been updated with those reviewer findings. If not, do not present the shortlist yet — go back and run Phase 4 first.
+
 Present the final hardened shortlist to the user:
 
 ```
@@ -230,16 +235,22 @@ Present the final hardened shortlist to the user:
 1. [Proposal 1]
    - Novelty: [summary]
    - Technical depth: [summary]
+   - Mathematical/formal substance: [summary]
+   - Why a skeptical top-tier reviewer should care: [summary]
    - Strongest objection: [summary]
 
 2. [Proposal 2]
    - Novelty: [summary]
    - Technical depth: [summary]
+   - Mathematical/formal substance: [summary]
+   - Why a skeptical top-tier reviewer should care: [summary]
    - Strongest objection: [summary]
 
 3. [Proposal 3]
    - Novelty: [summary]
    - Technical depth: [summary]
+   - Mathematical/formal substance: [summary]
+   - Why a skeptical top-tier reviewer should care: [summary]
    - Strongest objection: [summary]
 
 Please choose one proposal, request regeneration with new constraints, or stop here.
@@ -251,6 +262,8 @@ Options:
 - Reply **with a proposal number/title** → proceed to Phase 5 with that proposal
 - Reply with **adjustments** → update the constraints and regenerate the shortlist
 - Reply **"stop"** → save the shortlist artifacts and end the workflow
+
+Do not reinterpret a user choice here. If the user explicitly chooses Proposal 2 or 3 instead of the top-ranked recommendation, carry forward the user's selected proposal rather than auto-substituting the recommended one.
 
 ### Phase 5: Refine the Chosen Proposal
 

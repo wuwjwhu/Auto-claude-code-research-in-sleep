@@ -42,6 +42,8 @@ For **proposal-shortlist review** (before experiment planning), ask the reviewer
 3. Whether the proposal is clearly differentiated from the closest prior work
 4. What the strongest reviewer objection would be
 5. What evidence would later be needed to defend the proposal
+6. Whether the idea would still matter to the field if executed perfectly, or whether it would still feel incremental
+7. Whether simplicity is a virtue here or a warning sign that the contribution is too thin
 
 When `papers/index.md` exists, use it to identify the 2-5 most important comparator papers first. If a comparator paper needs direct inspection, pass file paths to the primary artifacts and prefer `main_tex_path` over `pdf_path` whenever readable TeX exists.
 
@@ -56,6 +58,9 @@ Please act as a senior ML reviewer (NeurIPS/ICML level). For this proposal, iden
 3. Whether the novelty story is legible relative to the closest work
 4. The strongest reviewer objection
 5. The minimum evidence that would eventually be needed to defend the claim
+6. Whether the idea would still matter if executed perfectly
+7. Whether its simplicity is a virtue or a warning sign
+Also provide: strongest accept argument, strongest reject argument, depth verdict (THIN / ADEQUATE / STRONG), and novelty type (empirical / mechanism / formal / theorem / conceptual).
 Please be brutally honest.
 PROMPT
 )" --skip-git-repo-check 2>&1
@@ -104,7 +109,8 @@ Update project memory/notes with key review conclusions.
 - Be honest about weaknesses — hiding them leads to worse feedback
 - Push back on criticisms you disagree with, but accept valid ones
 - Focus on ACTIONABLE feedback
-- At proposal-shortlist stage, prioritize conceptual sharpness, technical depth, and novelty positioning before detailed experiment-package design
+- At proposal-shortlist stage, prioritize conceptual sharpness, technical depth, mechanism-level novelty, and top-tier importance before detailed experiment-package design
+- Do not over-reward neatness by itself: a compact proposal without formal substance or a reviewer-compelling mechanism can still be THIN
 - Save the raw review output you want to reuse in later rounds
 - The review document should be self-contained (readable without the conversation)
 

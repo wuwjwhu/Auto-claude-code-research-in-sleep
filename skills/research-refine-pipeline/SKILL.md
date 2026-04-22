@@ -12,8 +12,8 @@ Refine and concretize: **$ARGUMENTS**
 
 Use this skill when the user does not want to stop at a refined method. The goal is to produce a coherent package that includes:
 
-- a problem-anchored, elegant final proposal
-- the review history explaining why the method is focused
+- a problem-anchored, top-tier, substantively strong final proposal
+- the review history explaining why the method is focused and strong enough to matter
 - a detailed experiment roadmap tied to the paper's claims
 - a compact pipeline summary that says what to run next
 
@@ -52,17 +52,19 @@ Do not plan a large experiment suite on top of an unstable method. First stabili
 
 ### Phase 1: Method Refinement Stage
 
-Run the `research-refine` workflow and keep its V3 philosophy intact:
+Run the `research-refine` workflow and keep its stronger thesis standard intact:
 
 - preserve the Problem Anchor
-- keep one dominant contribution
-- modernize only when it improves the paper
+- keep one coherent central thesis
+- prefer the strongest top-tier contribution rather than the smallest intervention
+- modernize only when it materially improves the paper
 
 Exit this stage only when these are explicit:
 
 - the final method thesis
 - the dominant contribution
-- the complexity intentionally rejected
+- the mathematical/formal core, if any
+- the technical burden that is essential rather than decorative
 - the key claims and must-run ablations
 - the remaining risks, if any
 
@@ -74,9 +76,11 @@ Before the experiment stage, write a short gate check:
 
 - What is the final method thesis?
 - What is the dominant contribution?
-- What complexity was intentionally rejected?
+- What is the mathematical/formal core, if any?
+- What technical burden is essential rather than decorative?
 - Which reviewer concerns still matter for validation?
 - Is a frontier primitive central, optional, or absent?
+- Why is the method strong enough for a top-tier venue?
 
 If these answers are not crisp, tighten the final proposal first.
 
@@ -169,8 +173,9 @@ Best next step:
 - Do not let the experiment plan override the Problem Anchor.
 - Do not widen the paper story after method refinement unless a missing validation block is truly necessary.
 - Reuse the same claims across `FINAL_PROPOSAL.md`, `EXPERIMENT_PLAN.md`, and `PIPELINE_SUMMARY.md`.
-- Keep the main paper story compact.
-- If the method is intentionally simple, defend that simplicity in the experiment plan rather than adding new components.
+- Keep the main paper story coherent and non-bloated, but do not compress away essential technical or formal substance.
+- If the method is compact, defend that compactness only when it preserves a theorem, formal object, provable claim, or a reviewer-compelling mechanism-level insight.
+- If the method is technically richer, require every major component to justify itself through stronger claims rather than aesthetic sophistication.
 - If the method uses a modern LLM / VLM / Diffusion / RL primitive, make its necessity test explicit.
 - If the method does not need a frontier primitive, say that clearly and avoid forcing one.
 - Prefer the staged skills when the user only needs one stage; use this skill for the integrated flow.

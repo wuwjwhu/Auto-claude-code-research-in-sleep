@@ -132,30 +132,54 @@ Save the full raw reviewer output for follow-up rounds.
 
 ### Phase 3: First-Pass Filtering
 
-For each generated proposal, quickly evaluate:
+For each generated proposal, evaluate it with an explicit top-tier screen:
 
-1. **Novelty / differentiation**
+1. **Problem importance / motivation**
+   - Is the problem itself important enough that a strong answer would matter to the field?
+   - Would a skeptical top-tier reviewer care even if the empirical gains are only moderate?
+
+2. **Novelty / differentiation**
    - Is the mechanism genuinely different from the closest work?
    - Is the proposal more than a renamed combination of familiar parts?
+   - If the idea sounds mathematically novel, is there an actual new formal object, theorem target, provable property, or mechanism-level principle behind that claim?
 
-2. **Technical depth**
+3. **Technical depth / formal substance**
    - Is there a real mechanism, formulation, theorem, or principle?
+   - If the method is compact, does that compactness carry real mathematical or mechanistic substance rather than just looking elegant?
    - Would a reviewer see a substantive contribution rather than a thin tweak?
 
-3. **Paper-worthiness**
+4. **Top-tier paper potential**
    - If executed well, would this make a compelling top-tier paper?
    - Does the answer matter regardless of whether the empirical outcome is strongly positive or mixed?
+   - Would the field update its beliefs if this paper were true?
 
-4. **Feasibility check**
+5. **Feasibility check**
    - Data availability
    - Implementation complexity
    - Whether the proposal is actionable under realistic resources
    - Feasibility is a constraint, not the primary ranker
 
-5. **Evidence hygiene**
+6. **Evidence hygiene**
    - If a claim came only from prepared report prose and not from current literature verification, treat it as a brainstorming seed, not as proof of novelty or importance.
 
-Eliminate proposals that fail any of these. Typically 8-12 proposals reduce to 3-5.
+Also score each proposal on:
+- problem importance / motivation
+- mechanism-level novelty
+- mathematical / formal substance
+- technical depth
+- differentiation from closest work
+- top-tier paper potential
+- feasibility
+- thin-elegance risk (high is bad)
+- unjustified-complexity risk (high is bad)
+
+Hard elimination rules:
+- Eliminate proposals that are novel in phrasing but shallow in mechanism.
+- Eliminate proposals that are elegant but lack a theorem, formal object, provable claim, or comparably deep mechanism-level insight.
+- Eliminate proposals that are just a renamed recombination of familiar parts.
+- Eliminate proposals whose extra complexity does not buy a stronger claim.
+
+Typically 8-12 proposals reduce to 3-5.
 
 ### Phase 4: Deep Validation (for top proposals)
 
@@ -176,6 +200,9 @@ For each surviving proposal, run a deeper evaluation:
    ```
 
 3. **Combine rankings**: Merge your assessment with GPT-5.4's ranking. Select the top 2-3 proposals for the final shortlist.
+   - Do not advance a proposal merely because it is clean, feasible, or compact.
+   - Compactness only helps when it preserves strong mathematical/formal substance or clearly sharpens a reviewer-compelling mechanism-level contribution.
+   - Reject both failure modes: thin-but-polished ideas and overbuilt-but-shallow systems.
 
 ### Phase 5: Output — Ranked Proposal Report
 

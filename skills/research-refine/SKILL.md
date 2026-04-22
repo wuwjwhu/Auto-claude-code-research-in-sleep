@@ -10,13 +10,14 @@ Refine and concretize: **$ARGUMENTS**
 
 ## Overview
 
-Use this skill when the research problem is already visible but the technical route is still fuzzy. The goal is not to produce a bloated proposal or a benchmark shopping list. The goal is to turn a vague direction into a **problem -> focused method -> minimal validation** document that is concrete enough to implement, elegant enough to feel paper-worthy, and current enough to resonate in the foundation-model era.
+Use this skill when the research problem is already visible but the technical route is still fuzzy. The goal is not to produce a bloated proposal or a benchmark shopping list. The goal is to turn a vague direction into a **problem -> strong mechanism-level thesis -> claim-complete validation** document that is concrete enough to implement, strong enough for a top-tier venue, and current enough to resonate in the foundation-model era.
 
 Four principles dominate this skill:
 
 1. **Do not lose the original problem.** Freeze an immutable **Problem Anchor** and reuse it in every round.
-2. **One paper, one dominant contribution.** Prefer one sharp thesis plus at most one supporting contribution.
+2. **Prefer the strongest top-tier contribution, not the smallest intervention.** Keep one coherent central thesis, but do not compress away essential technical or formal substance.
 3. **Modern leverage is a prior, not a decoration.** When LLM / VLM / Diffusion / RL / distillation / inference-time scaling naturally fit the bottleneck, use them concretely. Do not bolt them on as buzzwords.
+4. **Simplicity is a tiebreaker, not the goal.** Prefer the simpler route only when it preserves or sharpens substantive novelty, a theorem, a formal object, a provable claim, or a reviewer-compelling mechanism-level insight.
 
 ```
 User input (PROBLEM + vague APPROACH)
@@ -166,20 +167,20 @@ Do not stop at generic research questions. Make the gap operational:
 
 Before locking the method, compare two candidate routes if both are plausible:
 
-- **Route A: Elegant minimal route** — the smallest mechanism that directly targets the bottleneck *only if* it gives a mathematical proof.
-- **Route B: Frontier-native route** — a more modern route that uses LLM / VLM / Diffusion / RL / distillation / inference-time scaling if it gives a cleaner or stronger story.
+- **Route A: Compact route with real formal/provable substance** — a smaller mechanism that is only preferred when it carries a theorem, formal object, provable property, or comparably deep mechanism-level insight.
+- **Route B: Richer technical route with stronger contribution mass** — a more elaborate route that uses additional machinery only when it materially strengthens the paper's central claim, depth, or top-tier significance.
 
 Then decide:
 
-- Which route is more likely to become a strong paper under the stated constraints?
-- Which route has the cleaner novelty story relative to the closest work?
-- Which route avoids contribution sprawl?
+- Which route is more likely to become the strongest top-tier paper under the stated constraints?
+- Which route has the stronger mechanism-level and novelty story relative to the closest work?
+- Which route avoids both failure modes: thin elegance and unjustified complexity?
 
-If both routes are weak, rethink the framing instead of combining them into a larger system by default.
+Prefer the simpler route only if it does not sacrifice substantive novelty or technical depth. If both routes are weak, rethink the framing instead of combining them into a larger system by default.
 
 #### Step 1.4: Concretize the Method First
 
-The proposal must answer "how would we actually build this?" Prefer method detail over broad experimentation and prefer reuse over invention.
+The proposal must answer "how would we actually build this?" Prefer method detail over broad experimentation. Prefer reuse when it sharpens the claim, but introduce new mechanisms, formal structure, or technical machinery when that invention is necessary for a real top-tier contribution.
 
 Cover:
 
@@ -324,11 +325,14 @@ Your job is NOT to reward extra modules, contribution sprawl, or a giant benchma
 Your job IS to stress-test whether the proposed method:
 (1) still solves the original anchored problem,
 (2) is concrete enough to implement,
-(3) presents a focused, elegant contribution,
-(4) uses foundation-model-era techniques appropriately when they are the natural fit.
+(3) presents a focused but substantively strong contribution,
+(4) uses foundation-model-era techniques appropriately when they are the natural fit,
+(5) is strong enough to matter for a top-tier venue rather than merely looking elegant.
 
 Review principles:
-- Prefer the smallest adequate mechanism with a mathematical proof.
+- Prefer the strongest top-tier contribution, not the smallest intervention.
+- Reward compactness only when it preserves or sharpens a theorem, formal object, provable claim, or clearly reviewer-compelling mechanism-level insight.
+- Penalize thin proposals even if they are neat, and penalize bloated proposals whose extra modules do not buy stronger claims.
 - Penalize parallel contributions that make the paper feel unfocused.
 - If a modern LLM / VLM / Diffusion / RL route would clearly produce a better paper, say so concretely.
 - If the proposal is already modern enough, do NOT force trendy components.
@@ -341,24 +345,28 @@ call that out explicitly as drift instead of treating it as a normal revision re
 [Paste the FULL proposal from Phase 1]
 === END PROPOSAL ===
 
-Score these 7 dimensions from 1-10:
+Score these 9 dimensions from 1-10:
 
 1. **Problem Fidelity**: Does the method still attack the original bottleneck, or has it drifted into solving something easier or different?
 
-2. **Method Specificity**: Are the interfaces, representations, losses, training stages, and inference path concrete enough that an engineer could start implementing?
+2. **Problem Importance / Motivation**: If this worked, would the answer matter enough for a skeptical top-tier reviewer to care?
 
-3. **Contribution Quality**: Is there one dominant mechanism-level contribution with real novelty, good parsimony, and no obvious contribution sprawl?
+3. **Method Specificity**: Are the interfaces, representations, losses, training stages, and inference path concrete enough that an engineer could start implementing?
 
-4. **Frontier Leverage**: Does the proposal use current foundation-model-era primitives appropriately when they are the right tool, instead of defaulting to old-school module stacking?
+4. **Mechanism-Level Novelty**: Is there a real mechanism-level contribution rather than a renamed recombination of familiar parts?
 
-5. **Feasibility**: Can this method be trained and integrated with the stated resources and data assumptions?
+5. **Mathematical / Formal Substance**: If the idea claims compact elegance, does it carry a theorem, formal object, provable property, or comparably deep formal/mechanistic insight?
 
-6. **Validation Focus**: Are the proposed experiments minimal but sufficient to validate the core claims? Is there unnecessary experimental bloat?
+6. **Technical Depth**: Is the method technically substantial enough to matter, rather than merely neat or incremental?
 
-7. **Venue Readiness**: If executed well, would the contribution feel sharp and timely enough for a top venue?
+7. **Frontier Leverage**: Does the proposal use current foundation-model-era primitives appropriately when they are the right tool, instead of defaulting to old-school module stacking?
 
-**OVERALL SCORE** (1-10): Weighted toward Problem Fidelity, Method Specificity, Contribution Quality, and Frontier Leverage.
-Use this weighting: Problem Fidelity 15%, Method Specificity 25%, Contribution Quality 25%, Frontier Leverage 15%, Feasibility 10%, Validation Focus 5%, Venue Readiness 5%.
+8. **Feasibility**: Can this method be trained and integrated with the stated resources and data assumptions?
+
+9. **Validation Sufficiency**: Are the proposed experiments lean but complete enough to establish the mechanism, necessity, and strength of the core claims?
+
+**OVERALL SCORE** (1-10): Weighted toward Problem Fidelity, Problem Importance, Method Specificity, Mechanism-Level Novelty, Mathematical/Formal Substance, and Technical Depth.
+Use this weighting: Problem Fidelity 10%, Problem Importance / Motivation 10%, Method Specificity 15%, Mechanism-Level Novelty 20%, Mathematical / Formal Substance 15%, Technical Depth 15%, Frontier Leverage 5%, Feasibility 5%, Validation Sufficiency 5%.
 
 For each dimension scoring < 7, provide:
 - The specific weakness
@@ -394,12 +402,14 @@ Save review to `refine-logs/round-1-review.md` with the raw response in a `<deta
 Extract:
 
 - **Problem Fidelity**
+- **Problem Importance / Motivation**
 - **Method Specificity**
-- **Contribution Quality**
+- **Mechanism-Level Novelty**
+- **Mathematical / Formal Substance**
+- **Technical Depth**
 - **Frontier Leverage**
 - **Feasibility**
-- **Validation Focus**
-- **Venue Readiness**
+- **Validation Sufficiency**
 - **Overall score**
 - **Verdict**
 - **Drift Warning**
@@ -412,9 +422,9 @@ Update `refine-logs/score-history.md`:
 ```markdown
 # Score Evolution
 
-| Round | Problem Fidelity | Method Specificity | Contribution Quality | Frontier Leverage | Feasibility | Validation Focus | Venue Readiness | Overall | Verdict |
-|-------|------------------|--------------------|----------------------|-------------------|-------------|------------------|-----------------|---------|---------|
-| 1     | X                | X                  | X                    | X                 | X           | X                | X               | X       | REVISE  |
+| Round | Problem Fidelity | Problem Importance | Method Specificity | Mechanism-Level Novelty | Mathematical/Formal Substance | Technical Depth | Frontier Leverage | Feasibility | Validation Sufficiency | Overall | Verdict |
+|-------|------------------|--------------------|--------------------|-------------------------|-------------------------------|-----------------|-------------------|-------------|------------------------|---------|---------|
+| 1     | X                | X                  | X                  | X                       | X                             | X               | X                 | X           | X                      | X       | REVISE  |
 ```
 
 **STOP CONDITION**: If overall score >= SCORE_THRESHOLD, verdict is READY, and there is no unresolved drift warning, skip to Phase 5.
@@ -442,13 +452,13 @@ Then process reviewer feedback:
 
 Bias the revisions toward:
 
-- a sharper central contribution
-- fewer moving parts
-- cleaner reuse of strong existing backbones
-- more natural foundation-model-era leverage when it improves the paper
-- leaner, claim-driven experiments
+- a sharper and stronger central contribution
+- the complexity level actually required by that contribution
+- reuse of strong existing backbones when reuse sharpens the claim
+- new formal structure or technical machinery when invention is necessary for real depth
+- claim-complete, not merely minimal, experiments
 
-Do **not** add multiple parallel contributions just to chase score. If the reviewer requests another module, first ask whether the same gain can come from a better interface, distillation signal, reward model, or inference policy on top of an existing backbone.
+Do **not** add multiple parallel contributions just to chase score. Also do **not** compress away essential substance just to make the method look elegant. If the reviewer requests another module, ask whether it truly buys a stronger claim; if the current method is thin, allow justified complexity rather than forcing smallness by default.
 
 Save to `refine-logs/round-N-refinement.md`:
 
@@ -467,7 +477,8 @@ Save to `refine-logs/round-N-refinement.md`:
 - Dominant contribution after revision:
 - Components removed or merged:
 - Reviewer suggestions rejected as unnecessary complexity:
-- Why the remaining mechanism is still the smallest adequate route (Can it be proven mathematically?):
+- Why the chosen complexity level is justified and not merely decorative:
+- If the method is compact, what theorem, formal object, provable claim, or comparably deep mechanism-level insight justifies that compactness:
 
 ## Changes Made
 
@@ -648,8 +659,15 @@ If the final verdict is not READY, still write the best current final version he
 
 ## Next Steps
 - If READY: proceed to `/experiment-plan` for a full experiment roadmap, then `/run-experiment`
-- If REVISE: manually address the remaining mechanism weaknesses, then re-run `/research-refine`
+- If REVISE: stop and wait for the user's choice of one concrete branch, then execute that branch rather than merely suggesting it
 - If RETHINK: revisit the core mechanism, possibly with `/idea-creator`
+
+For the **REVISE** case, offer explicit options such as:
+- **A.** manually tighten the proposal now (rewrite `refine-logs/FINAL_PROPOSAL.md` and update the reports in the same run)
+- **B.** proceed to `/experiment-plan` anyway despite the risk
+- **C.** switch back to `/idea-creator` to pick a different proposal
+
+Once the user chooses A/B/C, execute that branch in the same workflow unless the user explicitly asks to stop. Do not end with only a recommendation for what to do next.
 ```
 
 #### Step 5.4: Finalize `score-history.md`
@@ -682,10 +700,15 @@ Remaining concerns:
 Review summary: refine-logs/REVIEW_SUMMARY.md
 Full report: refine-logs/REFINEMENT_REPORT.md
 Final proposal: refine-logs/FINAL_PROPOSAL.md
-Suggested next step: /experiment-plan
 ```
 
-**Checkpoint:** Update `refine-logs/REFINE_STATE.json` with `{"phase": "done", "status": "completed", ...}`.
+If the verdict is **READY**, you may recommend `/experiment-plan`.
+
+If the verdict is **REVISE**, present concrete branches (e.g. A/B/C above) and wait for the user to choose one. After the user chooses, execute that branch in the same workflow rather than stopping with a recommendation.
+
+If the verdict is **RETHINK**, route back to `/idea-creator` only if the user chooses that branch.
+
+**Checkpoint:** Update `refine-logs/REFINE_STATE.json` with `{"phase": "done", "status": "completed", ...}` only after the current refinement skill run has actually finished its chosen branch or the user has explicitly told you to stop.
 
 ## Output Protocols
 
@@ -710,6 +733,7 @@ Suggested next step: /experiment-plan
 - **Do not fabricate results.** Only describe expected evidence and planned experiments.
 - **Be specific about compute and data assumptions.** Vague "we'll train a model" is not enough.
 - **Document everything.** Save every raw review, every anchor check, every simplicity check, and every major method change.
+- **Do not stop at branch recommendation.** After a REVISE verdict, once the user chooses A/B/C, execute that branch instead of replying with only another recommendation.
 
 ## Composing with Other Skills
 

@@ -62,6 +62,8 @@ Prompt should include:
 - All papers found in Phase B
 - Ask: "Is this method novel? What is the closest prior work? What is the delta?"
 - If relevant, also ask: "Is the mathematical or conceptual novelty real, or is this mostly a rephrasing of existing mechanisms?"
+- Also ask: "Is the novelty substantive enough for a top-tier paper, or is it still likely to be seen as incremental even if the overlap is not exact?"
+- Also ask: "If the idea is compact, what theorem, formal object, provable property, or comparably deep mechanism-level insight actually justifies that compactness?"
 
 ### Phase D: Novelty Report
 Output a structured report:
@@ -86,14 +88,19 @@ Output a structured report:
 - Recommendation: PROCEED / PROCEED WITH CAUTION / ABANDON
 - Key differentiator: [what makes this unique, if anything]
 - Risk: [what a reviewer would cite as prior work]
+- Substance verdict: THIN / ADEQUATE / STRONG
+- If compact, what formal or mechanism-level fact justifies that compactness?
+- If still weak, would a reviewer likely call it incremental even with perfect execution?
 
 ### Suggested Positioning
-[How to frame the contribution to maximize novelty perception]
+[How to frame the contribution to maximize novelty perception without overstating shallow novelty]
 ```
 
 ### Important Rules
 - Be BRUTALLY honest — false novelty claims waste months of research time
 - "Applying X to Y" is NOT novel unless the application reveals surprising insights
+- A proposal can be novel in literal overlap terms and still be too thin for a top-tier paper; say that explicitly when it happens
+- Do not over-reward compactness unless it comes with a theorem, formal object, provable property, or similarly deep mechanism-level contribution
 - Check both the method AND the experimental setting for novelty
 - If the method is not novel but the FINDING would be, say so explicitly
 - Always check the most recent 6 months of arXiv — the field moves fast
