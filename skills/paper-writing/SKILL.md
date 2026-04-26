@@ -29,7 +29,7 @@ In this hybrid pack, the pipeline itself is unchanged, but `paper-plan` and `pap
 - **REVIEWER_MODEL = `gpt-5.4`** — Model used via `codex exec` for plan review, figure review, writing review, and improvement loop.
 - **AUTO_PROCEED = true** — Auto-continue between phases. Set `false` to pause and wait for user approval after each phase.
 - **HUMAN_CHECKPOINT = false** — When `true`, the improvement loop (Phase 5) pauses after each round's review to let you see the score and provide custom modification instructions. When `false` (default), the loop runs fully autonomously. Passed through to `/auto-paper-improvement-loop`.
-- **ILLUSTRATION = `figurespec`** — Architecture/illustration generator for Phase 2b: `figurespec` (default, deterministic JSON→SVG via `/figure-spec`, best for architecture/workflow/topology), `gemini` (AI-generated via `/paper-illustration`, best for qualitative method illustrations; needs `GEMINI_API_KEY`), `codex-image2` (AI-generated via `/paper-illustration-image2` through the local Codex native image bridge — no external API key, uses your ChatGPT Plus/Pro quota; experimental), `mermaid` (Mermaid syntax via `/mermaid-diagram`, free, best for flowcharts), or `false` (skip Phase 2b, manual only).
+- **ILLUSTRATION = `figurespec`** — Architecture/illustration generator for Phase 2b: `figurespec` (default, deterministic JSON→SVG via `/figure-spec`, best for architecture/workflow/topology), `gemini` (AI-generated via `/paper-illustration`, best for qualitative method illustrations; needs `GEMINI_API_KEY`), `cpa-image2` (AI-generated via `/paper-illustration-cpa-image2` through a CPA Image API service; Linux-friendly; needs `CPA_API_BASE` and `CPA_API_KEY`), `codex-image2` (AI-generated via `/paper-illustration-image2` through the local Codex native image bridge — no external API key, uses your ChatGPT Plus/Pro quota; experimental), `mermaid` (Mermaid syntax via `/mermaid-diagram`, free, best for flowcharts), or `false` (skip Phase 2b, manual only).
 
 > Override inline: `/paper-writing "NARRATIVE_REPORT.md" — venue: NeurIPS, illustration: gemini, human checkpoint: true`
 > IEEE example: `/paper-writing "NARRATIVE_REPORT.md" — venue: IEEE_JOURNAL`
@@ -174,6 +174,15 @@ If the paper plan includes architecture diagrams, pipeline figures, audit cascad
 - Output: `figures/*.mmd` + `figures/*.png`
 - Free, no API key needed
 
+**When `illustration: cpa-image2`** — invoke `/paper-illustration-cpa-image2`:
+```
+/paper-illustration-cpa-image2 "[method description from PAPER_PLAN.md or NARRATIVE_REPORT.md]"
+```
+- Claude plans → layout/style checks → CPA Image API renders → Claude reviews and refines (same multi-stage prompting technique as `codex-image2`, different renderer)
+- Best for: Linux users with CPA service access who want a GPT-image-style renderer without Codex desktop/app-server
+- Output: `figures/ai_generated/figure_final.png` + `latex_include.tex` + `review_log.json` (emitted via `~/.claude/skills/paper-illustration-cpa-image2/paper_illustration_cpa_image2.py finalize`)
+- **Prerequisites**: `CPA_API_BASE`, `CPA_API_KEY`, and `cpa-image-generation/cpa_image_api.py`. Run `python3 ~/.claude/skills/paper-illustration-cpa-image2/paper_illustration_cpa_image2.py preflight --workspace .` to confirm before relying on this path.
+
 **When `illustration: codex-image2`** — invoke `/paper-illustration-image2`:
 ```
 /paper-illustration-image2 "[method description from PAPER_PLAN.md or NARRATIVE_REPORT.md]"
@@ -189,7 +198,8 @@ If the paper plan includes architecture diagrams, pipeline figures, audit cascad
 **Choosing the right mode:**
 - Formal architecture / workflow / topology figures → `figurespec` (default)
 - Method concept illustrations with natural style, have `GEMINI_API_KEY` → `gemini`
-- Method concept illustrations, prefer ChatGPT Plus/Pro quota over Gemini key → `codex-image2`
+- Method concept illustrations, Linux + CPA service access → `cpa-image2`
+- Method concept illustrations, prefer ChatGPT Plus/Pro quota via Codex desktop/app-server → `codex-image2`
 - Quick flowchart / state machine → `mermaid`
 - Full manual control → `false`
 
