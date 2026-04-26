@@ -181,7 +181,7 @@ If the paper plan includes architecture diagrams, pipeline figures, audit cascad
 - Claude plans → layout/style checks → CPA Image API renders → Claude reviews and refines (same multi-stage prompting technique as `codex-image2`, different renderer)
 - Best for: Linux users with CPA service access who want a GPT-image-style renderer without Codex desktop/app-server
 - Output: `figures/ai_generated/figure_final.png` + `latex_include.tex` + `review_log.json` (emitted via `~/.claude/skills/paper-illustration-cpa-image2/paper_illustration_cpa_image2.py finalize`)
-- **Prerequisites**: `CPA_API_BASE`, `CPA_API_KEY`, and `cpa-image-generation/cpa_image_api.py`. Run `python3 ~/.claude/skills/paper-illustration-cpa-image2/paper_illustration_cpa_image2.py preflight --workspace .` to confirm before relying on this path.
+- **Prerequisites**: `CPA_API_BASE`, `CPA_API_KEY`, and the bundled `cpa_image_api.py` shipped with the installed `paper-illustration-cpa-image2` skill. Run `python3 ~/.claude/skills/paper-illustration-cpa-image2/paper_illustration_cpa_image2.py preflight --workspace .` to confirm before relying on this path.
 
 **When `illustration: codex-image2`** — invoke `/paper-illustration-image2`:
 ```

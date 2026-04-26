@@ -67,7 +67,7 @@ and a **CPA Image API service** as the raster renderer.
 
 ## Constants
 
-- **RENDERER = `cpa-image2`** — CPA Image API generation endpoint through `cpa-image-generation/cpa_image_api.py`
+- **RENDERER = `cpa-image2`** — CPA Image API generation endpoint through this skill's bundled `cpa_image_api.py`
 - **MAX_ITERATIONS = 5** — Maximum refinement rounds
 - **TARGET_SCORE = 9** — Minimum acceptable score (1-10)
 - **OUTPUT_DIR = `figures/ai_generated/`** — Output directory
@@ -169,7 +169,7 @@ paper-illustration-cpa-image2 integration checklist:
 4. Confirm CPA prerequisites are available:
    - `CPA_API_BASE`
    - `CPA_API_KEY`
-   - `cpa-image-generation/cpa_image_api.py`
+   - bundled `cpa_image_api.py` in this skill directory
 5. Run:
 
 ```bash
@@ -237,8 +237,8 @@ python3 ~/.claude/skills/paper-illustration-cpa-image2/paper_illustration_cpa_im
   --json-out figures/ai_generated/render_v1.json
 ```
 
-The helper calls the CPA Image API generation endpoint through
-`cpa-image-generation/cpa_image_api.py`. It does **not** use the CPA Responses API.
+The helper calls the CPA Image API generation endpoint through this skill's bundled
+`cpa_image_api.py`. It does **not** use the CPA Responses API.
 
 If generation fails, report the CPA/helper error directly instead of hiding it.
 

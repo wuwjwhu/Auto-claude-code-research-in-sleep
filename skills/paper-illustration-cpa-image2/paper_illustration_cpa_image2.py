@@ -72,14 +72,7 @@ def build_latex_include(caption: str, label: str) -> str:
 
 
 def cpa_wrapper_path(workspace: Path) -> Path:
-    candidates = [
-        workspace / "cpa-image-generation" / "cpa_image_api.py",
-        Path(__file__).resolve().parent / "cpa_image_api.py",
-    ]
-    for candidate in candidates:
-        if candidate.is_file():
-            return candidate.resolve()
-    return candidates[0].resolve()
+    return (Path(__file__).resolve().parent / "cpa_image_api.py").resolve()
 
 
 def load_cpa_module(workspace: Path) -> ModuleType:
