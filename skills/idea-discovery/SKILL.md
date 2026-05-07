@@ -114,13 +114,20 @@ Phase 1 and Phase 2 will use `idea-stage/REF_PAPER_SUMMARY.md` as additional con
 
 ### Phase 1: Literature Survey
 
-Invoke `/research-lit` to map the research landscape:
+Invoke `/research-lit` to map the research landscape. Idea discovery is exactly the place where Gemini's AI-driven broad coverage adds value, so include `gemini` as a source by default unless the user already specified an explicit `— sources:` directive in their idea-discovery invocation:
 
 ```
+# If $ARGUMENTS already contains "— sources:", pass through unchanged
+# (the user is in control of source selection):
 /research-lit "$ARGUMENTS"
+
+# Otherwise (the common case), include gemini explicitly for broader discovery:
+/research-lit "$ARGUMENTS" — sources: all, gemini
 ```
 
 If `REPORT` was set explicitly, forward it into `/research-lit`. Otherwise rely on `/research-lit` auto-detection in `deep-research/`.
+
+If `gemini-cli` is not installed, `/research-lit` skips the Gemini source gracefully with a warning — no break to the pipeline. Users who want to force-disable Gemini in idea-discovery can pass `/idea-discovery "topic" — sources: all` explicitly (which becomes the literal source list, no auto-injection).
 
 **What this does:**
 - Read prepared deep-research markdown first when available
@@ -129,6 +136,7 @@ If `REPORT` was set explicitly, forward it into `/research-lit`. Otherwise rely 
 - Use `/research-lit`'s source-first local paper ingestion path when extracted `.tex` bundles are available
 - Delegate bounded `.tex` digestion to sub-agents that return compact digests rather than pulling raw source into the main context
 - Build and refresh `papers/index.md` so each ingested paper records its PDF path, main TeX path, and concise summary fields for later reuse
+- Plus Gemini-driven broad discovery (sub-problem decomposition, naming variants, alias coverage) when `gemini-cli` is available
 - Complete the literature stage only after any newly downloaded/relevant bundles have been digested and the index is refreshed for downstream reuse
 - Build a landscape map: sub-directions, approaches, open problems
 - Identify structural gaps and recurring limitations
