@@ -35,7 +35,7 @@ Existing skills cover adjacent territory but none of this exact composition: `/r
 
 ## Constants
 
-- **REVIEWER_MODEL** = inherits from `/auto-paper-improvement-loop`'s default (`gpt-5.5` via Codex MCP) unless the user passes `— reviewer-model: gpt-5.4` (legacy) or another OpenAI model. Codex reasoning effort is fixed at `xhigh` for all reviewer calls per the existing skill convention.
+- **REVIEWER_MODEL** = inherits from `/auto-paper-improvement-loop`'s default (`gpt-5.5` via `codex exec`) unless the user passes `— reviewer-model: gpt-5.5` (legacy) or another OpenAI model. Codex reasoning effort is fixed at `xhigh` for all reviewer calls per the existing skill convention.
 - **ROUNDS** = 2 (default; matches `/auto-paper-improvement-loop`'s diminishing-returns line). A 3rd round only fires if Phase 2 reports non-convergence AND the user explicitly approves at the round-2 checkpoint.
 - **EFFORT** = `max` (default for resubmit; resubmit is high-stakes). The user can override with `— effort: balanced` if time is extremely tight.
 - **EDIT_WHITELIST_PATH** = `<paper-base-dir>/../<NewVenue>/.aris/edit_whitelist.yaml` (auto-generated in Phase 0; user can override with a custom path).
@@ -52,7 +52,7 @@ Three mandatory inputs:
 
 Optional:
 
-- **`— reviewer-model: gpt-5.4`** — override the default reviewer (`gpt-5.5`); use this for legacy reproducibility or to consume the older quota tier.
+- **`— reviewer-model: gpt-5.5`** — override the default reviewer (`gpt-5.5`); use this for legacy reproducibility or to consume the older quota tier.
 - **`— rounds: <int>`** — override default 2.
 - **`— assurance: draft`** — relax MANDATORY gates (default `submission`).
 - **`— effort: balanced`** — relax `max` if time is critical.
@@ -417,7 +417,7 @@ The new venue dir is **the** deliverable; the prior venue dir is untouched.
 
 ## Review Tracing
 
-Every Codex MCP reviewer call across all phases saves traces per `shared-references/review-tracing.md` to `<NEW_VENUE_DIR>/.aris/traces/<phase-name>/<date>_run<NN>/`. Both threads of `/kill-argument` are preserved separately. The master `RESUBMIT_REPORT.json` `trace_path` field points to the top-level traces directory.
+Every `codex exec` reviewer call across all phases saves traces per `shared-references/review-tracing.md` to `<NEW_VENUE_DIR>/.aris/traces/<phase-name>/<date>_run<NN>/`. Both threads of `/kill-argument` are preserved separately. The master `RESUBMIT_REPORT.json` `trace_path` field points to the top-level traces directory.
 
 ## Notes
 

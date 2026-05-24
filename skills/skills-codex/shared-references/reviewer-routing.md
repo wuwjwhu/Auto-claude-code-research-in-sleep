@@ -60,7 +60,7 @@ If reviewer is omitted or reviewer=codex:
 If reviewer=oracle-pro:
   check Oracle MCP availability
   if available:
-    call mcp__oracle__consult with model gpt-5.4-pro
+    call mcp__oracle__consult with model gpt-5.5-pro
   if unavailable:
     print a clear warning
     fall back to the default Codex xhigh reviewer
@@ -68,7 +68,7 @@ If reviewer=oracle-pro:
 
 ## Invariants
 
-- Base skills do not use the legacy Codex MCP thread path as the default reviewer route.
+- Base skills do not use the legacy `codex exec` thread path as the default reviewer route.
 - Reviewer independence still applies: pass file paths and task framing, not executor summaries.
 - Overlay packages may replace only the reviewer route.
 - Overlay packages do not change executor semantics.

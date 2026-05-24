@@ -38,7 +38,7 @@ The dangerous citation problems are **not** wildly fake citations — those are 
 
 ## Constants
 
-- **REVIEWER_MODEL = `gpt-5.5`** — Used via Codex MCP. Default for cross-model review with web access.
+- **REVIEWER_MODEL = `gpt-5.5`** — Used via `codex exec`. Default for cross-model review with web access.
 - **CONTEXT_POLICY = `fresh`** — Each audit run uses a new reviewer thread (REVIEWER_BIAS_GUARD). Never `codex-reply`.
 - **WEB_SEARCH = required** — The reviewer must perform real web/DBLP/arXiv lookups, not pattern-match from memory.
 - **OUTPUT = `CITATION_AUDIT.md`** — Human-readable per-entry verdict report.
@@ -411,7 +411,7 @@ The artifact conforms to the schema in `shared-references/assurance-contract.md`
     "sections/3.related.tex":     "sha256:..."
   },
   "trace_path":       ".aris/traces/citation-audit/<date>_run<NN>/",
-  "thread_id":        "<codex mcp thread id>",
+  "thread_id":        "<codex exec thread id>",
   "reviewer_model":   "gpt-5.5",
   "reviewer_reasoning": "xhigh",
   "generated_at":     "<UTC ISO-8601>",

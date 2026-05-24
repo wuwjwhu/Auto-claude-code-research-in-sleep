@@ -232,7 +232,7 @@ Verdict rules:
 
 **If `verdict == WARN`**: deliver the HTML but surface the warning list. User decides whether to fix or accept.
 
-**If `mcp__codex__codex` is not available** (e.g., user runs `/render-html` on a Codex-CLI-only setup where Codex MCP isn't wired): emit `verdict: REVIEW_UNAVAILABLE` to the sidecar, do not fabricate `PASS`, and tell the user the HTML was generated but **not** independently reviewed. The user can manually invoke `/research-review` on the source MD or re-run with Codex MCP available.
+**If `codex exec` is not available**: emit `verdict: REVIEW_UNAVAILABLE` to the sidecar, do not fabricate `PASS`, and tell the user the HTML was generated but **not** independently reviewed. The user can manually invoke `/research-review` on the source MD or re-run with `codex exec` available.
 
 ### Step 5: (Optional) Verify in browser
 

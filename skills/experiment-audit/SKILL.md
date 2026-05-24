@@ -1,6 +1,6 @@
 ---
 name: experiment-audit
-description: "Audit experiment integrity before claiming results. Uses cross-model review (GPT-5.4) to check for fake ground truth, score normalization fraud, phantom results, and insufficient scope. Use when user says \"审计实验\", \"check experiment integrity\", \"audit results\", \"实验诚实度\", or after experiments complete before writing claims."
+description: "Audit experiment integrity before claiming results. Uses cross-model review (GPT-5.5) to check for fake ground truth, score normalization fraud, phantom results, and insufficient scope. Use when user says \"审计实验\", \"check experiment integrity\", \"audit results\", \"实验诚实度\", or after experiments complete before writing claims."
 argument-hint: [experiment-dir-or-results-path]
 allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, Agent
 ---
@@ -21,13 +21,13 @@ These are NOT intentional deception — they are failure modes of optimizing age
 
 ## Core Principle
 
-**The executor (Claude) collects file paths. The reviewer (GPT-5.4) reads code and judges integrity. The executor does NOT participate in integrity judgment.**
+**The executor (Claude) collects file paths. The reviewer (GPT-5.5) reads code and judges integrity. The executor does NOT participate in integrity judgment.**
 
 This follows `shared-references/reviewer-independence.md` and `shared-references/experiment-integrity.md`.
 
 ## Constants
 
-- **REVIEWER_BACKEND = `codex`** — Default: `codex exec` (xhigh). Override with `— reviewer: oracle-pro` for GPT-5.4 Pro via Oracle MCP. See `shared-references/reviewer-routing.md`.
+- **REVIEWER_BACKEND = `codex`** — Default: `codex exec` (xhigh). Override with `— reviewer: oracle-pro` for GPT-5.5 Pro via Oracle MCP. See `shared-references/reviewer-routing.md`.
 
 ## Workflow
 
@@ -47,7 +47,7 @@ Scan project directory for:
 
 **DO NOT summarize, interpret, or explain any file content.** Only collect paths.
 
-### Step 2: Send to Reviewer (GPT-5.4 via `codex exec`)
+### Step 2: Send to Reviewer (GPT-5.5 via `codex exec`)
 
 Pass ONLY file paths and the audit checklist to the reviewer. The reviewer reads everything directly.
 
@@ -131,7 +131,7 @@ Parse the reviewer's response and write `EXPERIMENT_AUDIT.md`:
 # Experiment Audit Report
 
 **Date**: [today]
-**Auditor**: GPT-5.4 xhigh (cross-model, read-only)
+**Auditor**: GPT-5.5 xhigh (cross-model, read-only)
 **Project**: [project name]
 
 ## Overall Verdict: [PASS | WARN | FAIL]

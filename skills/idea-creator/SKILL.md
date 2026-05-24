@@ -138,7 +138,6 @@ Generate 8-12 concrete research proposals. For each proposal, provide:
 Prioritize proposals that are:
 - top-venue worthy if executed well
 - technically deep rather than superficially clever
-- not "apply X to Y" unless the application reveals a genuinely new mechanism or principle
 - differentiated from the strongest nearby prior work
 - feasible enough to pursue later, without letting cheap testability dominate the ranking
 
@@ -204,9 +203,9 @@ Typically 8-12 proposals reduce to 3-5.
 
 For each surviving proposal, run a deeper evaluation:
 
-1. **Novelty check**: Use the `/novelty-check` workflow (multi-source search + GPT-5.4 cross-verification) for each proposal.
+1. **Novelty check**: Use the `/novelty-check` workflow (multi-source search + GPT-5.5 cross-verification) for each proposal.
 
-2. **Critical review**: Use GPT-5.4 via `codex exec` (same thread):
+2. **Critical review**: Use GPT-5.5 via `codex exec` (same thread):
    ```
    Here are our top proposals after filtering:
    [paste surviving proposals with novelty check results]
@@ -218,7 +217,7 @@ For each surviving proposal, run a deeper evaluation:
    - Which 2-3 would you actually keep as a final shortlist?
    ```
 
-3. **Combine rankings**: Merge your assessment with GPT-5.4's ranking. Select the top 2-3 proposals for the final shortlist.
+3. **Combine rankings**: Merge your assessment with GPT-5.5's ranking. Select the top 2-3 proposals for the final shortlist.
    - Do not advance a proposal merely because it is clean, feasible, or compact.
    - Compactness only helps when it preserves strong mathematical/formal substance or clearly sharpens a reviewer-compelling mechanism-level contribution.
    - Reject both failure modes: thin-but-polished ideas and overbuilt-but-shallow systems.
@@ -318,7 +317,7 @@ if research-wiki/ exists:
 - The user provides a DIRECTION, not an idea. Your job is to generate the proposals.
 - Quantity first, quality second: brainstorm broadly, then filter ruthlessly.
 - Do not rank proposals by how cheaply they can be piloted. Rank them by novelty, depth, mechanism clarity, and paper-worthiness.
-- "Apply X to Y" is the lowest form of research idea. Push for deeper questions.
+- The idea of “simply applying X to Y” is a low-level story in subsequent paper writing, unless there is sufficient motivation from the limitations of existing methods or “we are the first to do this.” One should further pursue deeper questions.
 - Include eliminated proposals in the report — they save future time by documenting dead ends.
 - **If the user's direction is too broad (e.g., "NLP", "computer vision", "reinforcement learning"), STOP and ask them to narrow it.** A good direction is 1-2 sentences specifying the problem, domain, and constraint — e.g., "factorized gap in discrete diffusion LMs" or "sample efficiency of offline RL with image observations". Without sufficient specificity, generated ideas will be too vague to run experiments on.
 - **Anti-hallucination for cited papers.** When the landscape survey or novelty justification cites specific papers, every cited paper must pass pre-search verification (`verify_papers.py`, canonical name resolved per [`shared-references/integration-contract.md`](../shared-references/integration-contract.md) §2; 3-layer arXiv / CrossRef / S2 fallback inside the helper itself). Policy D1 (primary + degraded-output fallback): if the helper is unresolved **or** its invocation fails, mark candidates `[UNVERIFIED]` and continue rather than dropping or guessing. Never fabricate arXiv IDs, DOIs, or titles from memory. Full protocol in [`shared-references/citation-discipline.md`](../shared-references/citation-discipline.md) § Pre-Search Verification Protocol.

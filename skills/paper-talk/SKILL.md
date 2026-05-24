@@ -115,7 +115,7 @@ The audit JSON files follow the shared 6-state schema; see
    - LaTeX: `which xelatex pdflatex latexmk`
    - PPTX rendering: `which soffice` (LibreOffice headless) — required for Phase 4 export integrity check; otherwise prompt user to export PDF manually.
    - PDF tools: `which pdfinfo pdftoppm` (poppler) — required for `/slides-polish` PNG rendering.
-   - Codex MCP availability.
+   - `codex exec` availability.
    - python-pptx (`python3 -c 'import pptx'`).
 3. **Resolve overrides** from `$ARGUMENTS`: `talk_type`, `minutes`, `assurance`, `reference`, `style`, `effort`.
 4. **State init**: write `.aris/paper-talk/PIPELINE_STATE.json` with `phase: 0`, timestamp, all resolved overrides.

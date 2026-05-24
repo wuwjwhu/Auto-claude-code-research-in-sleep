@@ -53,7 +53,7 @@ For EACH core claim, do only the narrower proposal-specific checks needed to str
    - Do not re-run a broad literature sweep here unless the prior literature stage was clearly insufficient
 
 ### Phase C: Cross-Model Verification
-Call REVIEWER_MODEL via `codex exec` (`codex exec`) with xhigh reasoning:
+Call REVIEWER_MODEL via `codex exec` with xhigh reasoning:
 ```
 config: {"model_reasoning_effort": "xhigh"}
 ```

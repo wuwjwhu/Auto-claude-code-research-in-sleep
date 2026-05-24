@@ -169,7 +169,7 @@ Invoke `/idea-creator` with the landscape context (and `idea-stage/REF_PAPER_SUM
 - If `idea-stage/REF_PAPER_SUMMARY.md` exists, include it as context — ideas should build on, improve, or extend the reference paper
 - Read `papers/index.md` first when available so brainstorming is anchored to the local paper library and its recorded PDF/main-TeX paths plus concise paper digests
 - If Phase 1 used prepared reports, rely on the normalized literature synthesis rather than rereading raw `deep-research/*.md`
-- Brainstorm 8-12 concrete proposals via GPT-5.4 xhigh
+- Brainstorm 8-12 concrete proposals via GPT-5.5 xhigh
 - Filter by problem importance, mathematical/formal substance, technical depth, mechanism clarity, differentiation from closest prior work, and paper-worthiness
 - Reject proposals that are merely clean/elegant without a theorem, formal object, provable claim, or comparably deep mechanism-level contribution
 - Reduce to a shortlist of 2-3 strong proposals
@@ -200,7 +200,7 @@ For each shortlisted proposal, run a targeted novelty check:
 - Builds on the paper discovery and first-pass reading already done by `/research-lit`
 - Starts from `papers/index.md` when available to recover the local prior-work map plus each paper's `main_tex_path` / `pdf_path`
 - Runs proposal-specific freshness checks for the closest overlapping work
-- Cross-verifies with GPT-5.4 xhigh
+- Cross-verifies with GPT-5.5 xhigh
 - Checks for concurrent work (last 3-6 months)
 - Identifies the closest existing work and the remaining differentiation points
 
@@ -222,7 +222,7 @@ For the surviving shortlisted proposals, get brutal feedback:
 **This phase requires an explicit `/research-review` execution.** Do not treat reviewer-style objections generated earlier inside `/idea-creator`, `/novelty-check`, or ad hoc analysis as a substitute for this step. The workflow is not ready for the shortlist checkpoint until `/research-review` has actually run on the surviving proposals.
 
 **What this does:**
-- GPT-5.4 xhigh acts as a senior reviewer (NeurIPS/ICML level)
+- GPT-5.5 xhigh acts as a senior reviewer (NeurIPS/ICML level)
 - Starts from `papers/index.md` when available so review is anchored to the local prior-work set before selectively reopening only the most critical comparator papers
 - Uses `main_tex_path` first and `pdf_path` second when a critical prior paper must be read directly
 - Scores conceptual sharpness, technical depth, mechanism clarity, and contribution quality
@@ -283,7 +283,7 @@ After the user chooses one proposal, refine it into a concrete method:
 
 **What this does:**
 - Freeze a **Problem Anchor** to prevent scope drift
-- Iteratively refine the method via GPT-5.4 review
+- Iteratively refine the method via GPT-5.5 review
 - Produce a focused, paper-worthy final proposal
 - Output: `refine-logs/FINAL_PROPOSAL.md`, `refine-logs/REVIEW_SUMMARY.md`, `refine-logs/REFINEMENT_REPORT.md`
 

@@ -1,6 +1,6 @@
 ---
 name: proof-checker
-description: Rigorous mathematical proof verification and fixing workflow. Reads a LaTeX proof, identifies gaps via cross-model review (Codex GPT-5.4 xhigh), fixes each gap with full derivations, re-reviews, and generates an audit report. Use when user says "检查证明", "verify proof", "proof check", "审证明", "check this proof", or wants rigorous mathematical verification of a theory paper.
+description: Rigorous mathematical proof verification and fixing workflow. Reads a LaTeX proof, identifies gaps via cross-model review (Codex GPT-5.5 xhigh), fixes each gap with full derivations, re-reviews, and generates an audit report. Use when user says "检查证明", "verify proof", "proof check", "审证明", "check this proof", or wants rigorous mathematical verification of a theory paper.
 argument-hint: "[path-to-tex-file or proof-description] [--deep-fix] [--restatement-check]"
 allowed-tools: Bash(*), Read, Grep, Glob, Write, Edit, Agent, mcp__codex__codex, mcp__codex__codex-reply
 ---
@@ -175,7 +175,7 @@ h_act = Θ(κ^α)  [as κ→0, uniform in π on compact subsets of Π_K, for fix
 ```
 Flag any statement where limit order is ambiguous or uniformity is unclear.
 
-### Phase 1: First Review (Codex GPT-5.4 xhigh)
+### Phase 1: First Review (Codex GPT-5.5 xhigh)
 
 Submit the **complete proof content** with the following **mandatory reviewer checklist** in the prompt:
 
@@ -347,7 +347,7 @@ Log this choice — it is a scope-changing decision when it alters theorem state
 pdflatex -interaction=nonstopmode <file>.tex 2>&1 | grep -E "Error|Warning|undefined"
 ```
 
-### Phase 3: Re-Review (Codex GPT-5.4 xhigh)
+### Phase 3: Re-Review (Codex GPT-5.5 xhigh)
 
 Use `codex-reply` with saved threadId. Include fix summaries. Request the same mandatory checklist.
 
@@ -577,7 +577,7 @@ The artifact conforms to the schema in `shared-references/assurance-contract.md`
     "sections/4.theory.tex":    "sha256:..."
   },
   "trace_path":       ".aris/traces/proof-checker/<date>_run<NN>/",
-  "thread_id":        "<codex mcp thread id>",
+  "thread_id":        "<codex exec thread id>",
   "reviewer_model":   "gpt-5.5",
   "reviewer_reasoning": "xhigh",
   "generated_at":     "<UTC ISO-8601>",

@@ -125,7 +125,7 @@ Field semantics:
     after running `paper-claim-audit`? The next verifier run will catch it.)
 - **`trace_path`** — directory containing the full reviewer prompt + response
   pair, per `review-tracing.md`. Required for mandatory audits — not optional.
-- **`thread_id`** — Codex MCP thread ID, for forensic traceability.
+- **`thread_id`** — `codex exec` thread ID, for forensic traceability.
 - **`reviewer_model`** + **`reviewer_reasoning`** — proves cross-family review
   invariant was honored.
 - **`generated_at`** — UTC ISO-8601 timestamp.

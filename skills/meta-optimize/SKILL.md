@@ -123,7 +123,7 @@ For each optimization target, generate a concrete diff:
 
 ### Step 4: Cross-Model Review of Patches
 
-Send each patch to GPT-5.4 xhigh for adversarial review:
+Send each patch to GPT-5.5 xhigh for adversarial review:
 
 ```bash
 codex exec "$(cat <<'PROMPT'

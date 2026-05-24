@@ -130,7 +130,7 @@ Once initial results are in, start the autonomous improvement loop:
 Pass `REVIEWER_DIFFICULTY` through unchanged. For `hard` and `nightmare`, the downstream loop must preserve Reviewer Memory, Debate Protocol, Review Tracing, and any saved reviewer `agent_id` across rounds.
 
 **What this does (up to 4 rounds):**
-1. GPT-5.4 xhigh reviews the work (score, weaknesses, minimum fixes)
+1. GPT-5.5 xhigh reviews the work (score, weaknesses, minimum fixes)
 2. Codex implements fixes (code changes, new experiments, reframing)
 3. Deploy fixes, collect new results
 4. Re-review → repeat until score ≥ 6/10 or 4 rounds reached

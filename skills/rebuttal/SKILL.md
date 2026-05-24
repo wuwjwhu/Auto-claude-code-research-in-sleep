@@ -44,7 +44,7 @@ Workflow 4:   rebuttal (post-submission external reviews)
 - **REVIEWER_BACKEND = `codex`** — Default: `codex exec` (xhigh). Override with `— reviewer: oracle-pro` for GPT-5.5 Pro via Oracle MCP. See `shared-references/reviewer-routing.md`.
 - **MAX_INTERNAL_DRAFT_ROUNDS = 2** — draft → lint → revise.
 - **VENUE_MODE = `single_document`** — `single_document` for one shared author response, or `per_reviewer_thread` when each reviewer thread renders independently. Confirm the venue/interface before drafting if unclear. Affects Phase 4/7 output shape.
-- **STRESS_TEST_ROUNDS_BASE = 1** — One Codex MCP critique round on the full response set. Add focused rounds for `reviewer_priority: pivotal` responses, terminating when Codex returns no new substantive issues. Hard cap at 5.
+- **STRESS_TEST_ROUNDS_BASE = 1** — One `codex exec` critique round on the full response set. Add focused rounds for `reviewer_priority: pivotal` responses, terminating when Codex returns no new substantive issues. Hard cap at 5.
 - **MAX_STRESS_TEST_ROUNDS = 1** — Legacy alias for the base critique round count.
 - **MAX_FOLLOWUP_ROUNDS = 3** — per reviewer thread.
 - **AUTO_EXPERIMENT = false** — When `true`, automatically invoke `/experiment-bridge` to run supplementary experiments when the strategy plan identifies reviewer concerns that require new empirical evidence. When `false` (default), pause and present the evidence gap to the user for manual handling.

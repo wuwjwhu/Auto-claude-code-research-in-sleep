@@ -1,6 +1,6 @@
 ---
 name: "auto-review-loop-minimax"
-description: "Autonomous multi-round research review loop using MiniMax API. Use when you want to use MiniMax instead of Codex MCP for external review. Trigger with \"auto review loop minimax\" or \"minimax review\"."
+description: "Autonomous multi-round research review loop using MiniMax API. Use when you want to use MiniMax instead of `codex exec` for external review. Trigger with \"auto review loop minimax\" or \"minimax review\"."
 ---
 
 # Auto Review Loop (MiniMax Version): Autonomous Research Improvement
