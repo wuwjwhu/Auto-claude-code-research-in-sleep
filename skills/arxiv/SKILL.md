@@ -13,7 +13,11 @@ Search topic or arXiv paper ID: $ARGUMENTS
 
 - **PAPER_DIR** - Local directory to save downloaded paper artifacts. Default: `papers/` in the current project directory.
 - **MAX_RESULTS = 10** - Default number of search results.
-- **FETCH_SCRIPT** - `tools/arxiv_fetch.py` relative to the ARIS install, or the same path relative to the current project. Fall back to inline Python if not found.
+- **ARXIV_FETCHER** — canonical name `arxiv_fetch.py`, resolved per
+  [`shared-references/integration-contract.md`](../shared-references/integration-contract.md) §2
+  (Policy D1 — primary + fallback cascade). If unresolved (canonical
+  chain exhausted), fall back to the inline Python alternative
+  documented in Step 2.
 
 > Overrides (append to arguments):
 > - `/arxiv "attention mechanism" - max: 20` - return up to 20 results
@@ -42,29 +46,63 @@ If the argument matches an arXiv ID pattern (`YYMM.NNNNN` or `category/NNNNNNN`)
 
 ### Step 2: Search arXiv
 
-Locate the fetch script:
+Resolve `$ARXIV_FETCHER` via the canonical strict-safe chain (see
+[`shared-references/integration-contract.md`](../shared-references/integration-contract.md) §2):
 
 ```bash
-SCRIPT=$(python3 -c "
-import pathlib
-candidates = [
-    pathlib.Path('tools/arxiv_fetch.py'),
-    pathlib.Path.home() / '.claude' / 'skills' / 'arxiv' / 'arxiv_fetch.py',
-]
-for p in candidates:
-    if p.exists():
-        print(p)
-        break
-" 2>/dev/null)
+cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" || exit 1
+if [ -z "${ARIS_REPO:-}" ] && [ -f .aris/installed-skills.txt ]; then
+    ARIS_REPO=$(awk -F'\t' '$1=="repo_root"{print $2; exit}' .aris/installed-skills.txt 2>/dev/null) || true
+fi
+ARXIV_FETCHER=".aris/tools/arxiv_fetch.py"
+[ -f "$ARXIV_FETCHER" ] || ARXIV_FETCHER="tools/arxiv_fetch.py"
+[ -f "$ARXIV_FETCHER" ] || { [ -n "${ARIS_REPO:-}" ] && ARXIV_FETCHER="$ARIS_REPO/tools/arxiv_fetch.py"; }
+[ -f "$ARXIV_FETCHER" ] || ARXIV_FETCHER=""
 ```
 
-**If SCRIPT is found**, run:
+**If `$ARXIV_FETCHER` is non-empty**, run:
 
 ```bash
-python3 "$SCRIPT" search "QUERY" --max MAX_RESULTS
+python3 "$ARXIV_FETCHER" search "QUERY" --max MAX_RESULTS
 ```
 
-**If SCRIPT is not found**, fall back to inline Python and return metadata only.
+**If `$ARXIV_FETCHER` is empty** (Policy D1 cascade), fall back to inline Python:
+
+```bash
+python3 - <<'PYEOF'
+import json
+import urllib.parse
+import urllib.request
+import xml.etree.ElementTree as ET
+
+NS = "http://www.w3.org/2005/Atom"
+query = urllib.parse.quote("QUERY")
+url = (f"http://export.arxiv.org/api/query"
+       f"?search_query={query}&start=0&max_results=MAX_RESULTS"
+       f"&sortBy=relevance&sortOrder=descending")
+with urllib.request.urlopen(url, timeout=30) as r:
+    root = ET.fromstring(r.read())
+papers = []
+for entry in root.findall(f"{{{NS}}}entry"):
+    aid = entry.findtext(f"{{{NS}}}id", "").split("/abs/")[-1].split("v")[0]
+    title = (entry.findtext(f"{{{NS}}}title", "") or "").strip().replace("\n", " ")
+    abstract = (entry.findtext(f"{{{NS}}}summary", "") or "").strip().replace("\n", " ")
+    authors = [a.findtext(f"{{{NS}}}name", "") for a in entry.findall(f"{{{NS}}}author")]
+    published = entry.findtext(f"{{{NS}}}published", "")[:10]
+    cats = [c.get("term", "") for c in entry.findall(f"{{{NS}}}category")]
+    papers.append({
+        "id": aid,
+        "title": title,
+        "authors": authors,
+        "abstract": abstract,
+        "published": published,
+        "categories": cats,
+        "pdf_url": f"https://arxiv.org/pdf/{aid}.pdf",
+        "abs_url": f"https://arxiv.org/abs/{aid}",
+    })
+print(json.dumps(papers, ensure_ascii=False, indent=2))
+PYEOF
+```
 
 Present results as a table:
 
@@ -79,7 +117,16 @@ Present results as a table:
 When a single paper ID is requested (either directly or from Step 2):
 
 ```bash
-python3 "$SCRIPT" search "id:ARXIV_ID" --max 1
+python3 "$ARXIV_FETCHER" search "id:ARXIV_ID" --max 1
+# or fallback:
+python3 -c "
+import urllib.request, xml.etree.ElementTree as ET
+NS = 'http://www.w3.org/2005/Atom'
+url = 'http://export.arxiv.org/api/query?id_list=ARXIV_ID'
+with urllib.request.urlopen(url, timeout=30) as r:
+    root = ET.fromstring(r.read())
+# print full details ...
+"
 ```
 
 Display: title, all authors, categories, full abstract, published date, PDF URL, abstract URL, source URL.
@@ -90,8 +137,7 @@ When download is requested, for each paper ID to download:
 
 ```bash
 # Using fetch script:
-python3 "$SCRIPT" download ARXIV_ID --dir PAPER_DIR
-```
+python3 "$ARXIV_FETCHER" download ARXIV_ID --dir PAPER_DIR
 
 This downloads both artifacts by default:
 - `PAPER_DIR/ARXIV_ID.pdf`

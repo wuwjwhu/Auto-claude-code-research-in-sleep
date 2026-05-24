@@ -20,8 +20,17 @@ from pathlib import Path
 from typing import Any
 
 
-sys.stdout = os.fdopen(sys.stdout.fileno(), "wb", buffering=0)
-sys.stdin = os.fdopen(sys.stdin.fileno(), "rb", buffering=0)
+def _configure_stdio_for_mcp() -> None:
+    """Re-bind sys.stdout/sys.stdin as raw binary streams for the MCP protocol.
+
+    Called from main() rather than module import so that unit tests can
+    safely `importlib.exec_module(server.py)` without globally clobbering
+    the test process's text-mode stdio (which breaks subsequent print()
+    calls with TypeError).
+    """
+    sys.stdout = os.fdopen(sys.stdout.fileno(), "wb", buffering=0)
+    sys.stdin = os.fdopen(sys.stdin.fileno(), "rb", buffering=0)
+
 
 SERVER_NAME = os.environ.get("CLAUDE_REVIEW_SERVER_NAME", "claude-review")
 CLAUDE_BIN = os.environ.get("CLAUDE_BIN", "claude")
@@ -108,18 +117,59 @@ def find_claude_bin() -> str | None:
 
 
 def parse_claude_json(raw_stdout: str) -> tuple[dict[str, Any] | None, str | None]:
-    lines = [line.strip() for line in raw_stdout.splitlines() if line.strip()]
-    if not lines:
+    stripped = raw_stdout.strip()
+    if not stripped:
         return None, "Claude CLI returned empty output"
 
-    for candidate in reversed(lines):
+    # CLI 2.x: try whole stdout as a single JSON value first.
+    # Handles both compact one-line arrays and pretty-printed multi-line arrays.
+    try:
+        payload = json.loads(stripped)
+    except json.JSONDecodeError:
+        payload = None
+
+    if isinstance(payload, dict):
+        return payload, None
+    if isinstance(payload, list):
+        # claude CLI 2.x emits a JSON array of event objects under --output-format json
+        # (system init -> assistant -> rate_limit_event -> result). Only the terminal
+        # "result" event carries the fields run_claude_review consumes downstream
+        # (result text, session_id, duration_ms, stop_reason). Falling back to any
+        # other dict (e.g. rate_limit_event) would surface as a "successful parse"
+        # producing an empty review — strictly worse than a clear error.
+        for item in reversed(payload):
+            if isinstance(item, dict) and item.get("type") == "result":
+                return item, None
+        return None, "Claude CLI returned a JSON array without a 'result' event"
+
+    # Legacy CLI 1.x: NDJSON stream of dicts, walk lines in reverse for the
+    # last useful payload. Same array-vs-dict policy as above so a CLI 2.x
+    # JSON-array line surrounded by non-JSON noise (wrapper warnings, nvm/asdf
+    # banners, future CLI debug prints) still surfaces the result event
+    # instead of being silently dropped.
+    saw_array_without_result = False
+    for candidate in reversed(stripped.splitlines()):
+        candidate = candidate.strip()
+        if not candidate:
+            continue
         try:
-            payload = json.loads(candidate)
+            line_payload = json.loads(candidate)
         except json.JSONDecodeError:
             continue
-        if isinstance(payload, dict):
-            return payload, None
+        if isinstance(line_payload, dict):
+            if saw_array_without_result and line_payload.get("type") != "result":
+                continue
+            return line_payload, None
+        if isinstance(line_payload, list):
+            for item in reversed(line_payload):
+                if isinstance(item, dict) and item.get("type") == "result":
+                    return item, None
+            # fall through: this line was an array without a result event,
+            # but earlier lines might still carry one — keep scanning.
+            saw_array_without_result = True
 
+    if saw_array_without_result:
+        return None, "Claude CLI returned a JSON array without a 'result' event"
     return None, "Claude CLI did not return JSON output"
 
 
@@ -243,7 +293,25 @@ def run_claude_review(
     if payload is None:
         return None, "Failed to parse Claude CLI output"
     if result.returncode != 0 or payload.get("is_error"):
-        message = str(payload.get("result") or payload.get("error") or result.stderr.strip() or "Claude review failed")
+        # Claude CLI 2.x emits structured error events without `result` / `error`
+        # fields — the diagnostic text lives in an `errors` list (e.g.
+        # subtype="error_max_budget_usd", errors=["Reached maximum budget ..."]).
+        # Surface it explicitly; otherwise the user sees only the generic
+        # "Claude review failed" and loses the actionable message.
+        errors_list = payload.get("errors")
+        if isinstance(errors_list, list) and errors_list:
+            errors_text = "; ".join(str(e) for e in errors_list)
+        elif isinstance(errors_list, str):
+            errors_text = errors_list
+        else:
+            errors_text = ""
+        message = str(
+            payload.get("result")
+            or payload.get("error")
+            or errors_text
+            or result.stderr.strip()
+            or "Claude review failed"
+        )
         return None, message
 
     thread_id = payload.get("session_id")
@@ -595,6 +663,8 @@ def handle_request(request: dict[str, Any]) -> dict[str, Any] | None:
 
 
 def main() -> None:
+    _configure_stdio_for_mcp()
+
     if len(sys.argv) == 3 and sys.argv[1] == "--run-job":
         raise SystemExit(run_async_job(sys.argv[2]))
 

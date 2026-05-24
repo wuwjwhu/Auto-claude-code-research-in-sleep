@@ -29,7 +29,7 @@ Final deliverables:
 ## Constants
 
 - **AUTO_PROCEED = false** — Default: do not auto-continue at checkpoints that materially change scope. The final shortlist-selection gate must wait for explicit user choice.
-- **REVIEWER_MODEL = `gpt-5.4`** — Model used via `codex exec`. Must be an OpenAI model (e.g., `gpt-5.4`, `o3`, `gpt-4o`). Passed to sub-skills.
+- **REVIEWER_MODEL = `gpt-5.5`** — Model used via `codex exec`. Must be an OpenAI model (e.g., `gpt-5.5`, `o3`, `gpt-4o`). Passed to sub-skills.
 - **OUTPUT_DIR = `idea-stage/`** — All idea-stage outputs go here. Create the directory if it doesn't exist.
 - **ARXIV_DOWNLOAD = true** — By default, `/research-lit` downloads the top relevant arXiv reading artifacts during Phase 1: PDF plus source archive / extracted source tree when available. Passed through to `/research-lit`.
 - **COMPACT = false** — When `true`, generate compact summary files for short-context models and session recovery. Writes `idea-stage/IDEA_CANDIDATES.md` (top 2-3 proposals only) at the end of the shortlist stage.
